@@ -1,0 +1,10 @@
+{
+  "_note": "Hub-emoji poll. While 'active' is true, the emoji that bursts from the center card after a win rotates every 5 minutes, weighted by these numbers (any relative values — vote counts or percentages both work). Update the weights as your Twitter/X poll changes, commit, and push. Set 'active' to false to go back to the normal per-puzzle hub emoji.",
+  "active": false,
+  "options": [
+    {"emoji": "🦋", "weight": 1},
+    {"emoji": "🐟", "weight": 1},
+    {"emoji": "🌟", "weight": 1},
+    {"emoji": "🎈", "weight": 1}
+  ]
+}
