@@ -602,19 +602,22 @@ const SOLO_POP={GOAL:"🦋"};
    on a shared clock so every player sees the same emoji in the same window. */
 let pollCfg=null;
 async function loadPoll(){
-  /* prefer the live Vercel endpoint (reads the X poll); fall back to the hand-edited file */
-  try{ const r=await fetch("/api/hubpoll"); if(r.ok){ const j=await r.json(); if(j&&j.active){ pollCfg=j; return; } } }catch(e){}
+  /* prefer the live Vercel endpoint (reads the X poll); fall back to the hand-edited file.
+     the ?w= bucket changes every 5 min so we never get stuck on a stale cached response,
+     while still sharing one cached result (one X read) across everyone in that window */
+  try{ const r=await fetch("/api/hubpoll?w="+Math.floor(Date.now()/300000)); if(r.ok){ const j=await r.json(); if(j&&j.active){ pollCfg=j; return; } } }catch(e){}
   try{ const r=await fetch(pjURL("hubpoll.json"),{cache:"no-store"}); if(r.ok) pollCfg=await r.json(); }catch(e){}
 }
-function pollEmoji(){
+/* live poll options (with positive weight) while a poll is running, else null */
+function pollOptions(){
   if(!pollCfg||!pollCfg.active||!Array.isArray(pollCfg.options)) return null;
   const opts=pollCfg.options.filter(o=>o&&o.emoji&&o.weight>0);
-  if(!opts.length) return null;
+  return opts.length?opts:null;
+}
+/* one weighted-random emoji, drawn in proportion to the current vote counts */
+function pollPick(opts){
   const total=opts.reduce((a,o)=>a+o.weight,0);
-  const slot=Math.floor(Date.now()/300000);            /* 5-minute window */
-  let h=(slot*2654435761)>>>0; h^=h>>>15; h=Math.imul(h,2246822519)>>>0; h^=h>>>13; /* uniform 0..1 from the slot */
-  const r=(h>>>0)/4294967296*total;
-  let acc=0;
+  let r=Math.random()*total, acc=0;
   for(const o of opts){ acc+=o.weight; if(r<acc) return o.emoji; }
   return opts[opts.length-1].emoji;
 }
@@ -646,11 +649,11 @@ function hubPop(){
   const inner=t.querySelector(".tin");
   if(G){ G.killTweensOf(inner,"scale"); G.timeline().set(inner,{scale:1}).to(inner,{scale:0.85,duration:.09,ease:"power2.in"}).to(inner,{scale:1,duration:.22,ease:"back.out(2.2)"}); }
   const b=document.getElementById("board");
-  const poll=pollEmoji();   /* while a poll is live it overrides the per-puzzle hub emoji */
-  const cx=t._sx+TW/2, cy=t._sy+TH/2, he=poll||hubEmoji, solo=poll||SOLO_POP[special];
+  const opts=pollOptions();   /* if a poll is live, each emoji is drawn ∝ the vote counts */
+  const cx=t._sx+TW/2, cy=t._sy+TH/2, he=hubEmoji, solo=SOLO_POP[special];
   for(let i=0;i<12;i++){
     const e=document.createElement("div");
-    e.textContent=solo?solo:(he&&(i===0||Math.random()<0.3))?he:POP_EMOJI[Math.floor(Math.random()*POP_EMOJI.length)];
+    e.textContent=opts?pollPick(opts):(solo?solo:(he&&(i===0||Math.random()<0.3))?he:POP_EMOJI[Math.floor(Math.random()*POP_EMOJI.length)]);
     e.style.cssText="position:absolute;left:"+(cx-12)+"px;top:"+(cy-12)+"px;font-size:"+(18+Math.random()*14)+"px;pointer-events:none;z-index:30;will-change:transform;";
     b.appendChild(e);
     if(G){
