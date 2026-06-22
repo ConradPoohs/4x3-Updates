@@ -9,9 +9,12 @@ const TINTS=["#e8effc","#e6f4ea","#fcf3d7","#f1e8fa"];
 /* scoring point values — change them here and every page follows */
 const MISS=15, MISS_LATE=30;
 const HUB_BONUS=20, HUB_MID_BONUS=20;
-const PURPLE_BONUS=15, RAINBOW_BONUS=30, SPEED_BONUS=30;
+const PURPLE_BONUS=15, RAINBOW_BONUS=30, SPEED_BONUS=30, BLUE_BONUS=5;
 const RULE_BREAKER_SCORE=-100;
-const REV_RAINBOW=[3,0,1,2];
+/* solve-order achievements (category indices: 0 blue, 1 green, 2 yellow, 3 purple) */
+const REV_RAINBOW=[3,0,1,2];          /* purple → blue → green → yellow (+30) */
+const GRELLOW=[3,0,2,1];              /* purple → blue → yellow → green (no points, just bragging) */
+const GRUE=[3,1,0,2];                 /* purple → green → blue → yellow (no points, just bragging) */
 
 /* ---------- puzzle encoding ---------- */
 function b64e(s){return btoa(unescape(encodeURIComponent(s))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");}

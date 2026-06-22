@@ -32,27 +32,37 @@ function renderScoring(){
   const row=(l,v,cls)=>"<div class='srow'><span>"+l+"</span><span class='v "+(cls||"")+"'>"+v+"</span></div>";
   const note=(l,d)=>"<div class='srow'><span>"+l+"</span><span class='sd'>"+d+"</span></div>";
   document.getElementById("scoringBody").innerHTML=
-    "<div class='hint'>Every win starts at 100 points. Stay clean and quick to climb toward a perfect 200.</div>"+
+    "<div class='hint'>Every win starts at 100 points. Lose points for mistakes, gain them for flair, then add your streak. A flawless run tops out at a clean 200 (plus your streak).</div>"+
+
     "<div class='scoresec'><b>Mistakes</b>"+
       row("Each mistake","−"+MISS,"bad")+
       row("A slip with only two groups left","−"+MISS_LATE,"bad")+
     "</div>"+
+
     "<div class='scoresec'><b>Bonuses</b>"+
       row("Hub First — lead every guess with the shared word","+"+HUB_BONUS,"good")+
       row("Hub Middle — place the shared word second every guess","+"+HUB_MID_BONUS,"good")+
+      row("Blue First — solve the blue group first","+"+BLUE_BONUS,"good")+
       row("Purple First — solve the purple group first","+"+PURPLE_BONUS,"good")+
       row("Reverse Rainbow — purple → blue → green → yellow","+"+RAINBOW_BONUS,"good")+
       row("Sub-90s — finish in under 90 seconds","+"+SPEED_BONUS,"good")+
-      row("Daily streak — +1 for each day of your current streak","+streak","good")+
+      row("Daily streak — for each day of your current streak","+1 / day","good")+
     "</div>"+
+
+    "<div class='scoresec'><b>Just for bragging (no points)</b>"+
+      note("🎾 Grellow","Solve purple → blue → yellow → green")+
+      note("🦚 Grue","Solve purple → green → blue → yellow")+
+    "</div>"+
+
     "<div class='scoresec'><b>Top honors</b>"+
-      note("Perfect Game","0 mistakes + Hub First + Reverse Rainbow → a clean 200")+
+      note("Perfect Game","0 mistakes + Hub First + Reverse Rainbow → a clean 200 (before your streak)")+
       note("🥇 Gold plaque","A perfect game in under 90 seconds")+
       note("🥈 Silver plaque","A perfect game in under 120 seconds")+
     "</div>"+
+
     "<div class='scoresec'><b>Rule breaker</b>"+
       row("RULE BREAKER — put the shared word LAST in every guess",RULE_BREAKER_SCORE,"bad")+
-      note("","Wipes every point you earned and leaves you at "+RULE_BREAKER_SCORE+". The shared word is meant to lead, not trail.")+
+      note("","Wipes every point you earned — score and streak bonus included — and leaves you at "+RULE_BREAKER_SCORE+". The shared word is meant to lead, not trail.")+
     "</div>";
 }
 renderScoring();

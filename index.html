@@ -641,6 +641,12 @@ const DEFS={
     "Stand Out":{SHINE:"To be conspicuously good; to stand out.",SING:"When something really \"sings,\" it demands attention.",POP:"Vivid and eye-catching, as in \"make the colors pop.\""},
     "Rice Krispies Noises":{SNAP:"Snap, the first of the three Rice Krispies mascots: Snap! Crackle! Pop!",CRACKLE:"They get their names from the noise the milk makes when you pour it into puffed rice.",POP:"If you're not familiar because this is an American thing, we apologize."},
     "Palindromes":{RACECAR:"Racecar (somewhat famously) reads the same forwards and backwards.",ROTOR:"Also a palindrome; the spinning part of a motor or turbine.",POP:"Pop, yes, it's a tiny palindrome."}
+  },
+  BUTTON:{
+    "Mushroom Varieties":{OYSTER:"A soft, fan-shaped, mild edible mushroom.",SHIITAKE:"A savory, meaty mushroom common in East Asian cooking.",BUTTON:"The common little white mushroom."},
+    "Things You Press":{KEY:"You press a key on a keyboard.",DOORBELL:"The button on a house you press instead of knocking.",BUTTON:"You press a button to make something happen."},
+    "Clothing Fasteners":{ZIPPER:"Joins two edges of fabric with interlocking teeth.",CLASP:"A fastener that hooks two things together.",BUTTON:"Slips through a buttonhole to fasten clothing."},
+    "F1 World Champions":{HAMILTON:"Lewis Hamilton, seven-time Formula 1 World Champion.",VETTEL:"Sebastian Vettel, four-time F1 World Champion.",BUTTON:"Jenson Button, the 2009 Formula 1 World Champion."}
   }
 };
 /* post-game easter egg: tap the hub to press it in and burst out emojis */
@@ -821,7 +827,11 @@ function hubFirstAll(){ return guesses.length>0&&guesses.every(g=>g[0]===special
 function hubMiddleAll(){ return guesses.length>0&&guesses.every(g=>g[1]===special); }
 function hubLastAll(){ return guesses.length>0&&guesses.every(g=>g[2]===special); }
 function isPurpleFirst(){ return solvedIdx[0]===3; }
-function isRevRainbow(){ return solvedIdx.length===4&&REV_RAINBOW.every((c,i)=>solvedIdx[i]===c); }
+function isBlueFirst(){ return solvedIdx[0]===0; }
+function orderIs(seq){ return solvedIdx.length===4&&seq.every((c,i)=>solvedIdx[i]===c); }
+function isRevRainbow(){ return orderIs(REV_RAINBOW); }
+function isGrellow(){ return orderIs(GRELLOW); }   /* purple → blue → yellow → green */
+function isGrue(){ return orderIs(GRUE); }          /* purple → green → blue → yellow */
 function calcScore(){
   const won=mistakes<MAXM;
   const perfect=won&&mistakes===0;
@@ -829,9 +839,13 @@ function calcScore(){
   const hubMiddle=won&&hubMiddleAll();
   const ruleBreaker=won&&hubLastAll();                /* hub LAST every guess → wipes the board */
   const purpleFirst=won&&isPurpleFirst();
+  const blueFirst=won&&isBlueFirst();
   const revRainbow=won&&isRevRainbow();
+  const grellow=won&&isGrellow();                     /* no points, just an achievement */
+  const grue=won&&isGrue();                           /* no points, just an achievement */
+  const godDamnit=perfect&&hubFirst&&(grellow||grue); /* would've been perfect but for a green↔yellow or green↔blue swap */
   const fast=won&&solveMs!==null&&solveMs<90000;      /* solved in under 90 seconds → gems + bonus */
-  let score=won?Math.max(10,100-penalty)+(hubFirst?HUB_BONUS:0)+(hubMiddle?HUB_MID_BONUS:0)+(purpleFirst?PURPLE_BONUS:0)+(revRainbow?RAINBOW_BONUS:0)+(fast?SPEED_BONUS:0):0;
+  let score=won?Math.max(10,100-penalty)+(hubFirst?HUB_BONUS:0)+(hubMiddle?HUB_MID_BONUS:0)+(purpleFirst?PURPLE_BONUS:0)+(blueFirst?BLUE_BONUS:0)+(revRainbow?RAINBOW_BONUS:0)+(fast?SPEED_BONUS:0):0;
   let allRewards=perfect&&hubFirst&&revRainbow;       /* everything → a clean 200 */
   let goldPlaque=allRewards&&fast;                    /* perfect AND under 90s */
   let silverPlaque=allRewards&&solveMs!==null&&solveMs<120000&&!goldPlaque; /* perfect, 90–120s */
@@ -840,7 +854,7 @@ function calcScore(){
   const streak=(won&&dailyKey===todayStr())?streakWithToday():0;  /* +1/day of streak — release-day plays only */
   score+=streak;
   if(ruleBreaker){ score=RULE_BREAKER_SCORE; allRewards=false; goldPlaque=false; silverPlaque=false; perfectBonus=0; } /* RULE BREAKER trumps everything */
-  return {won, perfect, hubFirst, hubMiddle, ruleBreaker, purpleFirst, revRainbow, fast, allRewards, goldPlaque, silverPlaque, perfectBonus, streak, score};
+  return {won, perfect, hubFirst, hubMiddle, ruleBreaker, purpleFirst, blueFirst, revRainbow, grellow, grue, godDamnit, fast, allRewards, goldPlaque, silverPlaque, perfectBonus, streak, score};
 }
 
 /* ---------- end ---------- */
@@ -949,17 +963,21 @@ function showResult(won,score,fancy,quiet){
      quiet=true (used on a restored/finished game) builds the result + inline
      button without popping the modal open on every refresh. */
   document.getElementById("mbody").innerHTML=
-    "<h2>"+(calcScore().ruleBreaker?"Rule Breaker 💀":won?(mistakes===0?"Perfect! 🌟":"Solved!"):"Out of guesses 😵")+"</h2>"+
+    "<h2>"+(calcScore().ruleBreaker?"Rule Breaker 💀":calcScore().godDamnit?"God Damnit! 😤":won?(mistakes===0?"Perfect! 🌟":"Solved!"):"Out of guesses 😵")+"</h2>"+
     "<div class='score'>"+(calcScore().ruleBreaker
       ?"<b style='color:#7a2e22'>"+score+" pts</b><br><span style='font-size:22px;font-weight:800;letter-spacing:1px;color:#7a2e22'>RULE BREAKER</span><br><span style='display:inline-block;margin-top:5px;font-size:13px;font-weight:400;color:#7a7264;line-height:1.4'>You put the shared word last in every guess. That's not what we wanted you to do.</span>"
       :(won?"<b>"+score+" pts</b>":"")+
       (calcScore().allRewards
         ?"<br><span style='font-size:24px;font-weight:800;background:"+(calcScore().silverPlaque?"linear-gradient(120deg,#e8ebf1,#99a1af)":"linear-gradient(120deg,#e3c878,#bf941f)")+";-webkit-background-clip:text;background-clip:text;color:transparent'>"+(calcScore().goldPlaque?"Gold Plaque Unlocked!":calcScore().silverPlaque?"Silver Plaque Unlocked!":"Perfect Game")+"</span>"+((calcScore().goldPlaque||calcScore().silverPlaque)?"<br><span style='display:inline-block;margin-top:5px;font-size:13px;font-weight:400;color:#7a7264;line-height:1.4'>You got a perfect board in less than "+(calcScore().goldPlaque?"90 seconds! The game's current top achievement.":"120 seconds!")+"</span>":"")
-        :(won?" · ":"")+(mistakes?mistakes+" mistake"+(mistakes===1?"":"s"):"No mistakes")
+        :(calcScore().godDamnit?"<br><span style='font-size:21px;font-weight:800;color:#b83b2c'>God Damnit! Plaque</span><br><span style='display:inline-block;margin:4px 0 2px;font-size:13px;font-weight:400;color:#7a7264;line-height:1.4'>Nearly flawless. Which, honestly, makes it worse.</span><br>":"")
+         +(won?" · ":"")+(mistakes?mistakes+" mistake"+(mistakes===1?"":"s"):"No mistakes")
          +(calcScore().hubFirst?"<br><span style='color:#b8860b;font-weight:700'>Hub First +"+HUB_BONUS+"</span>":"")
          +(calcScore().hubMiddle?"<br><span style='color:#b8860b;font-weight:700'>Hub Middle +"+HUB_MID_BONUS+"</span>":"")
          +(calcScore().purpleFirst?"<br><span style='color:#a06ee1;font-weight:700'>Purple First +"+PURPLE_BONUS+"</span>":"")
+         +(calcScore().blueFirst?"<br><span style='color:#5b8def;font-weight:700'>Blue First +"+BLUE_BONUS+"</span>":"")
          +(calcScore().revRainbow?"<br><span style='color:#a06ee1;font-weight:700'>Reverse Rainbow +"+RAINBOW_BONUS+"</span>":"")
+         +(calcScore().grellow?"<br><span style='color:#56b870;font-weight:700'>Grellow! 🎾</span>":"")
+         +(calcScore().grue?"<br><span style='color:#3f9b9b;font-weight:700'>Grue! 🦚</span>":"")
          +(calcScore().fast?"<br><span style='color:#0f8f86;font-weight:700'>Sub-90s bonus! +"+SPEED_BONUS+"</span> 💎":"")
          +(calcScore().streak>0?"<br><span style='color:#7d3fc4;font-weight:700'>"+calcScore().streak+"-day streak +"+calcScore().streak+"</span>":"")))+"</div>"+
     "<div style='text-align:center;margin:12px 0'><img id='shareImg' alt='' style='width:78%;max-width:300px;border-radius:12px;box-shadow:0 2px 10px rgba(43,38,32,.15)'></div>"+
@@ -1058,12 +1076,12 @@ function shineStreak(x,W,H,pos,alpha,wide){
   x.fillStyle=g; x.fillRect(0,0,W,H);
 }
 function drawShareCard(){
-  const {won,hubFirst,hubMiddle,ruleBreaker,purpleFirst,revRainbow,fast,allRewards,goldPlaque,silverPlaque,score}=calcScore();
+  const {won,hubFirst,hubMiddle,ruleBreaker,purpleFirst,revRainbow,godDamnit,fast,allRewards,goldPlaque,silverPlaque,score}=calcScore();
   const perfect=won&&mistakes===0;
   const plain=!(revRainbow||purpleFirst||hubFirst||hubMiddle||perfect);
   const S=2, M=14, W=420, R=26;
   const cell=44, gap=10, gridW=3*cell+2*gap;
-  const headH=allRewards?156:(ruleBreaker?150:130), rows=guesses.length, footH=84;
+  const headH=(allRewards||godDamnit)?156:(ruleBreaker?150:130), rows=guesses.length, footH=84;
   const H=headH+rows*(cell+gap)-gap+footH;
   const cv=document.createElement("canvas");
   cv.width=(W+2*M)*S; cv.height=(H+2*M)*S;
@@ -1130,16 +1148,20 @@ function drawShareCard(){
     x.fillStyle="#8a8174"; x.font="600 11px "+FONT; x.fillText("hankgreen.com/fourbythree",W/2,H-24);
     return cv;
   }
-  if(goldPlaque||silverPlaque){
-    /* ---- metal plaque: everything engraved into the metal (gold or silver) ---- */
+  if(goldPlaque||silverPlaque||godDamnit){
+    /* ---- metal plaque: everything engraved into the metal (gold, silver, or the red "God Damnit!") ---- */
     const P=goldPlaque?{
       g0:"#f7df93",g1:"#dcb442",g2:"#c89f24",g3:"#9c7c1b",hi:"rgba(255,249,214,.75)",grv:"rgba(86,58,8,.5)",
       eL:"rgba(255,250,224,.5)",eD:"rgba(66,42,2,.5)",eF:"#8c6c15",sD:"rgba(74,48,4,.6)",sL:"rgba(255,249,214,.5)",
       title:"Gold Plaque Unlocked!"
-    }:{
+    }:silverPlaque?{
       g0:"#f2f4f8",g1:"#ccd2db",g2:"#b3bac5",g3:"#888f9d",hi:"rgba(255,255,255,.85)",grv:"rgba(64,70,82,.4)",
       eL:"rgba(255,255,255,.6)",eD:"rgba(48,53,62,.5)",eF:"#6a717e",sD:"rgba(64,70,82,.5)",sL:"rgba(255,255,255,.6)",
       title:"Silver Plaque Unlocked!"
+    }:{
+      g0:"#f0a79c",g1:"#d65f50",g2:"#b83b2c",g3:"#86251b",hi:"rgba(255,236,230,.7)",grv:"rgba(86,18,10,.5)",
+      eL:"rgba(255,238,232,.5)",eD:"rgba(70,14,8,.5)",eF:"#7a2418",sD:"rgba(70,14,8,.6)",sL:"rgba(255,238,232,.5)",
+      title:"God Damnit!"
     };
     x.save(); rr(x,0,0,W,H,R); x.clip();
     const mg=x.createLinearGradient(0,0,W*0.5,H);
@@ -1389,7 +1411,8 @@ function recordHistory(){
     const cs=calcScore();
     const h=JSON.parse(localStorage.getItem("x43_history")||"{}");
     h[dailyKey]={s:cs.score, m:mistakes, w:cs.won?1:0, ms:solveMs,
-      hf:cs.hubFirst?1:0, hm:cs.hubMiddle?1:0, pf:cs.purpleFirst?1:0, rr:cs.revRainbow?1:0,
+      hf:cs.hubFirst?1:0, hm:cs.hubMiddle?1:0, pf:cs.purpleFirst?1:0, bf:cs.blueFirst?1:0,
+      rr:cs.revRainbow?1:0, gr:cs.grellow?1:0, gu:cs.grue?1:0, gd:cs.godDamnit?1:0,
       fast:cs.fast?1:0, rb:cs.ruleBreaker?1:0, p:cs.perfect?1:0,
       gold:cs.goldPlaque?1:0, silver:cs.silverPlaque?1:0,
       rel:(dailyKey===todayStr())?1:0,   /* played on its release day → counts toward the streak */
