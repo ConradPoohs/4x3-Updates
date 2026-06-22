@@ -13,6 +13,7 @@ const PURPLE_BONUS=15, RAINBOW_BONUS=30, SPEED_BONUS=30, BLUE_BONUS=5;
 const RULE_BREAKER_SCORE=-100;
 /* solve-order achievements (category indices: 0 blue, 1 green, 2 yellow, 3 purple) */
 const REV_RAINBOW=[3,0,1,2];          /* purple → blue → green → yellow (+30) */
+const RAINBOW=[2,1,0,3];              /* yellow → green → blue → purple (the forward rainbow card) */
 const GRELLOW=[3,0,2,1];              /* purple → blue → yellow → green (no points, just bragging) */
 const GRUE=[3,1,0,2];                 /* purple → green → blue → yellow (no points, just bragging) */
 

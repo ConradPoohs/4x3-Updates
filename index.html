@@ -318,8 +318,12 @@ function startGame(){
   /* if there's saved progress for this puzzle, reuse its board order so tiles
      sit where the player left them instead of reshuffling */
   const saved=loadGame();
-  const resuming=saved&&saved.s===special;
-  if(resuming&&Array.isArray(saved.slots0)&&saved.slots0.length===9) slots=saved.slots0.slice();
+  /* only resume if the saved board's words still match this puzzle — guards against a
+     puzzle being edited after someone started it (stale words would become orphan tiles) */
+  const expected=words.slice().sort().join("");
+  const resuming=saved&&saved.s===special&&Array.isArray(saved.slots0)&&saved.slots0.length===9
+    &&saved.slots0.slice().sort().join("")===expected;
+  if(resuming) slots=saved.slots0.slice();
   slots0=slots.slice();
   if(hubSpinTween){ hubSpinTween.kill(); hubSpinTween=null; }
   hubFx.forEach(tw=>tw.kill()); hubFx=[];
@@ -830,6 +834,7 @@ function isPurpleFirst(){ return solvedIdx[0]===3; }
 function isBlueFirst(){ return solvedIdx[0]===0; }
 function orderIs(seq){ return solvedIdx.length===4&&seq.every((c,i)=>solvedIdx[i]===c); }
 function isRevRainbow(){ return orderIs(REV_RAINBOW); }
+function isRainbow(){ return orderIs(RAINBOW); }     /* yellow → green → blue → purple */
 function isGrellow(){ return orderIs(GRELLOW); }   /* purple → blue → yellow → green */
 function isGrue(){ return orderIs(GRUE); }          /* purple → green → blue → yellow */
 function calcScore(){
@@ -841,6 +846,7 @@ function calcScore(){
   const purpleFirst=won&&isPurpleFirst();
   const blueFirst=won&&isBlueFirst();
   const revRainbow=won&&isRevRainbow();
+  const rainbow=won&&isRainbow();                      /* forward rainbow — its own card, no points */
   const grellow=won&&isGrellow();                     /* no points, just an achievement */
   const grue=won&&isGrue();                           /* no points, just an achievement */
   const godDamnit=perfect&&hubFirst&&(grellow||grue); /* would've been perfect but for a green↔yellow or green↔blue swap */
@@ -854,7 +860,7 @@ function calcScore(){
   const streak=(won&&dailyKey===todayStr())?streakWithToday():0;  /* +1/day of streak — release-day plays only */
   score+=streak;
   if(ruleBreaker){ score=RULE_BREAKER_SCORE; allRewards=false; goldPlaque=false; silverPlaque=false; perfectBonus=0; } /* RULE BREAKER trumps everything */
-  return {won, perfect, hubFirst, hubMiddle, ruleBreaker, purpleFirst, blueFirst, revRainbow, grellow, grue, godDamnit, fast, allRewards, goldPlaque, silverPlaque, perfectBonus, streak, score};
+  return {won, perfect, hubFirst, hubMiddle, ruleBreaker, purpleFirst, blueFirst, revRainbow, rainbow, grellow, grue, godDamnit, fast, allRewards, goldPlaque, silverPlaque, perfectBonus, streak, score};
 }
 
 /* ---------- end ---------- */
@@ -976,6 +982,7 @@ function showResult(won,score,fancy,quiet){
          +(calcScore().purpleFirst?"<br><span style='color:#a06ee1;font-weight:700'>Purple First +"+PURPLE_BONUS+"</span>":"")
          +(calcScore().blueFirst?"<br><span style='color:#5b8def;font-weight:700'>Blue First +"+BLUE_BONUS+"</span>":"")
          +(calcScore().revRainbow?"<br><span style='color:#a06ee1;font-weight:700'>Reverse Rainbow +"+RAINBOW_BONUS+"</span>":"")
+         +(calcScore().rainbow?"<br><span style='font-weight:800;background:linear-gradient(90deg,#e7b416,#56b870,#5b8def,#a06ee1);-webkit-background-clip:text;background-clip:text;color:transparent'>Rainbow! 🌈</span>":"")
          +(calcScore().grellow?"<br><span style='color:#56b870;font-weight:700'>Grellow! 🎾</span>":"")
          +(calcScore().grue?"<br><span style='color:#3f9b9b;font-weight:700'>Grue! 🦚</span>":"")
          +(calcScore().fast?"<br><span style='color:#0f8f86;font-weight:700'>Sub-90s bonus! +"+SPEED_BONUS+"</span> 💎":"")
@@ -1076,12 +1083,12 @@ function shineStreak(x,W,H,pos,alpha,wide){
   x.fillStyle=g; x.fillRect(0,0,W,H);
 }
 function drawShareCard(){
-  const {won,hubFirst,hubMiddle,ruleBreaker,purpleFirst,revRainbow,godDamnit,fast,allRewards,goldPlaque,silverPlaque,score}=calcScore();
+  const {won,hubFirst,hubMiddle,ruleBreaker,purpleFirst,revRainbow,rainbow,godDamnit,fast,allRewards,goldPlaque,silverPlaque,score}=calcScore();
   const perfect=won&&mistakes===0;
   const plain=!(revRainbow||purpleFirst||hubFirst||hubMiddle||perfect);
   const S=2, M=14, W=420, R=26;
   const cell=44, gap=10, gridW=3*cell+2*gap;
-  const headH=(allRewards||godDamnit)?156:(ruleBreaker?150:130), rows=guesses.length, footH=84;
+  const headH=(allRewards||godDamnit||rainbow)?156:(ruleBreaker?150:130), rows=guesses.length, footH=84;
   const H=headH+rows*(cell+gap)-gap+footH;
   const cv=document.createElement("canvas");
   cv.width=(W+2*M)*S; cv.height=(H+2*M)*S;
@@ -1212,6 +1219,46 @@ function drawShareCard(){
     }
     eng("four categories · three words · one shared", W/2, H-44, "12px "+FONT);
     eng("hankgreen.com/fourbythree", W/2, H-24, "600 11px "+FONT);
+    return cv;
+  }
+  if(rainbow){
+    /* ---- RAINBOW: four diagonal colour bands behind a frosted panel ---- */
+    x.save(); rr(x,0,0,W,H,R); x.clip();
+    const bg=x.createLinearGradient(0,0,W,H);
+    [COLORS[2],COLORS[1],COLORS[0],COLORS[3]].forEach((c,i)=>{ bg.addColorStop(i/4,c); bg.addColorStop((i+1)/4,c); }); /* yellow→green→blue→purple, hard stops = 4 bands */
+    x.fillStyle=bg; x.fillRect(0,0,W,H);
+    rr(x,12,12,W-24,H-24,R-7); x.fillStyle="rgba(250,247,241,0.86)"; x.fill();   /* frosted content panel */
+    x.restore();
+    rr(x,12.5,12.5,W-25,H-25,R-7); x.strokeStyle="rgba(255,255,255,0.6)"; x.lineWidth=1.5; x.stroke();
+    x.textAlign="center";
+    if(LOGO.complete&&LOGO.naturalWidth){ const lh=52, lw=lh*LOGO.naturalWidth/LOGO.naturalHeight; x.drawImage(LOGO,(W-lw)/2,15,lw,lh); }
+    else { x.fillStyle="#2b2620"; x.font="800 32px "+FONT; x.fillText("4 × 3",W/2,51); }
+    const subd=dailyKey?fmtDate(dailyKey):"";
+    if(subd){ x.fillStyle="#5d564a"; x.font="600 13px "+FONT; x.fillText(subd,W/2,86); }
+    x.fillStyle="#5d564a"; x.font="600 15px "+FONT; x.fillText(score+" pts",W/2,108);
+    const b="Rainbow!"; x.font="800 25px "+FONT;                  /* title in a four-colour sweep */
+    const bw2=x.measureText(b).width, gx=W/2-bw2/2;
+    const gt=x.createLinearGradient(gx,0,gx+bw2,0);
+    [COLORS[2],COLORS[1],COLORS[0],COLORS[3]].forEach((c,i)=>gt.addColorStop(i/3,c));
+    x.fillStyle=gt; x.fillText(b,W/2,140);
+    let y=headH; const x0=(W-gridW)/2;
+    for(const g of guesses){
+      g.forEach((w,k)=>{
+        const px=x0+k*(cell+gap);
+        x.save(); rr(x,px,y,cell,cell,9); x.clip();
+        if(w===special){ const h2=cell/2;
+          x.fillStyle=COLORS[0]; x.fillRect(px,y,h2,h2); x.fillStyle=COLORS[1]; x.fillRect(px+h2,y,h2,h2);
+          x.fillStyle=COLORS[3]; x.fillRect(px,y+h2,h2,h2); x.fillStyle=COLORS[2]; x.fillRect(px+h2,y+h2,h2,h2);
+        } else { const ci=cats.findIndex(c=>c.words.includes(w)); x.fillStyle=ci>=0?COLORS[ci]:"#cfc7b4"; x.fillRect(px,y,cell,cell); }
+        const gl=x.createLinearGradient(px,y,px+cell,y+cell); gl.addColorStop(0,"rgba(255,255,255,.45)"); gl.addColorStop(.5,"rgba(255,255,255,0)"); gl.addColorStop(1,"rgba(0,0,0,.12)");
+        x.fillStyle=gl; x.fillRect(px,y,cell,cell);
+        x.restore();
+        if(w===special){ rr(x,px+1,y+1,cell-2,cell-2,8); x.strokeStyle=GOLD; x.lineWidth=3; x.stroke(); }
+      });
+      y+=cell+gap;
+    }
+    x.fillStyle="#8a8174"; x.font="12px "+FONT; x.fillText("four categories · three words · one shared",W/2,H-44);
+    x.font="600 11px "+FONT; x.fillText("hankgreen.com/fourbythree",W/2,H-24);
     return cv;
   }
   /* rounded card; effects STACK so combined results read together */
@@ -1412,7 +1459,7 @@ function recordHistory(){
     const h=JSON.parse(localStorage.getItem("x43_history")||"{}");
     h[dailyKey]={s:cs.score, m:mistakes, w:cs.won?1:0, ms:solveMs,
       hf:cs.hubFirst?1:0, hm:cs.hubMiddle?1:0, pf:cs.purpleFirst?1:0, bf:cs.blueFirst?1:0,
-      rr:cs.revRainbow?1:0, gr:cs.grellow?1:0, gu:cs.grue?1:0, gd:cs.godDamnit?1:0,
+      rr:cs.revRainbow?1:0, rw:cs.rainbow?1:0, gr:cs.grellow?1:0, gu:cs.grue?1:0, gd:cs.godDamnit?1:0,
       fast:cs.fast?1:0, rb:cs.ruleBreaker?1:0, p:cs.perfect?1:0,
       gold:cs.goldPlaque?1:0, silver:cs.silverPlaque?1:0,
       rel:(dailyKey===todayStr())?1:0,   /* played on its release day → counts toward the streak */
