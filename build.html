@@ -60,13 +60,18 @@
 <script>
 "use strict";
 let betaLinkURL="", pubLinkURL="", dailyEntryLine="", dailyDate="", dailyEnc="";
+/* the builder shows the boxes in this colour order (0 blue,1 green,2 yellow,3 purple):
+   box 0 = yellow, box 1 = green, box 2 = blue, box 3 = purple */
+const COL_ORDER=[2,1,0,3];
+/* the game colours each category by its position in c[], so place every box's words at the
+   slot for the colour it was shown in — otherwise what you build isn't what you get */
+function toColorOrder(p){ const c=[]; for(let i=0;i<4;i++) c[COL_ORDER[i]]=p.c[i]; return Object.assign({},p,{c}); }
 /* deep links must point at the GAME (index), not this builder page */
 function gameURL(hash){ return location.href.split("#")[0].split("?")[0].replace(/[^/]*$/,"")+hash; }
 function buildInputs(){
   let h="";
-  const tintOrder=[2,1,0,3]; /* show the builder boxes as yellow, green, blue, purple */
   for(let i=0;i<4;i++){
-    h+="<div class='catbox' style='background:"+TINTS[tintOrder[i]]+"'>"+
+    h+="<div class='catbox' style='background:"+TINTS[COL_ORDER[i]]+"'>"+
       "<label>Category "+(i+1)+" name</label><input id='bCat"+i+"' placeholder='e.g. Planets' oninput='validateBuilder()'>"+
       "<div class='two'>"+
       "<div><label>Word A</label><input id='bW"+i+"a' oninput='validateBuilder()'></div>"+
@@ -115,7 +120,7 @@ function validateBuilder(){
 }
 function makeLinks(){
   const p=validateBuilder(); if(!p) return;
-  const enc=encPuzzle(p);
+  const enc=encPuzzle(toColorOrder(p));
   betaLinkURL=gameURL("#b="+enc);
   pubLinkURL=gameURL("#p="+enc);
   dailyDate=val("bDate"); dailyEnc=enc;
@@ -143,7 +148,7 @@ async function downloadPuzzlesJson(btn){
 }
 function previewPuzzle(){
   const p=validateBuilder(); if(!p) return;
-  location.href=gameURL("#b="+encPuzzle(p));   /* open the game on the beta link */
+  location.href=gameURL("#b="+encPuzzle(toColorOrder(p)));   /* open the game on the beta link */
 }
 buildInputs();
 </script>
