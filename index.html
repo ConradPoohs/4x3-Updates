@@ -676,6 +676,12 @@ const DEFS={
     "Types of Chocolate":{MILK:"Milk chocolate — sweet and creamy, made with milk.",WHITE:"White chocolate — cocoa butter and sugar, no cocoa solids.",DARK:"Dark chocolate — rich and bittersweet, heavy on cocoa."},
     "Lacking Light":{DIM:"Faintly lit; not bright.",MURKY:"Dim and cloudy; hard to see through.",DARK:"With little or no light."},
     "Contains \"ARK\"":{SHARK:"Has 'ARK' inside it: sh-ARK.",SPARKLE:"Has 'ARK' inside it: sp-ARK-le.",DARK:"Has 'ARK' inside it: d-ARK."}
+  },
+  PITCH:{
+    "Qualities of a Musical Note":{TONE:"The quality of a sound.",KEY:"The notes a piece is built on.",PITCH:"How high or low a note sounds."},
+    "Where a Match Is Played":{FIELD:"The playing area.",GROUND:"British for a sports stadium or field.",PITCH:"British for a sports field, as in a football pitch."},
+    "To Throw a Baseball":{TOSS:"Throw lightly.",HURL:"Throw hard.",PITCH:"Throw the ball to the batter."},
+    "Famously black things":{JET:"A glossy-black gemstone — actually a form of coal.",COAL:"The combustible fossil-fuel rock.",PITCH:"A dark resin produced after distilling coal tar."}
   }
 };
 /* post-game easter egg: tap the hub to press it in and burst out emojis */
@@ -875,6 +881,7 @@ function calcScore(){
   const grellow=won&&isGrellow();                     /* no points, just an achievement */
   const grue=won&&isGrue();                           /* no points, just an achievement */
   const godDamnit=perfect&&hubFirst&&(grellow||grue); /* would've been perfect but for a green↔yellow or green↔blue swap */
+  const earlyBird=won&&dailyKey===todayStr()&&new Date(startTime).getHours()===0; /* played today's daily in the first hour of the local day */
   const fast=won&&solveMs!==null&&solveMs<90000;      /* solved in under 90 seconds → gems + bonus */
   let score=won?Math.max(10,100-penalty)+(hubFirst?HUB_BONUS:0)+(hubMiddle?HUB_MID_BONUS:0)+(purpleFirst?PURPLE_BONUS:0)+(blueFirst?BLUE_BONUS:0)+(revRainbow?RAINBOW_BONUS:0)+(fast?SPEED_BONUS:0):0;
   let allRewards=perfect&&hubFirst&&revRainbow;       /* everything → a clean 200 */
@@ -887,7 +894,7 @@ function calcScore(){
   const adBonus=(won&&adClicked)?AD_BONUS:0;       /* thanks for clicking the ad */
   score+=adBonus;
   if(ruleBreaker){ score=RULE_BREAKER_SCORE; allRewards=false; goldPlaque=false; silverPlaque=false; perfectBonus=0; } /* RULE BREAKER trumps everything */
-  return {won, perfect, hubFirst, hubMiddle, ruleBreaker, purpleFirst, blueFirst, revRainbow, rainbow, grellow, grue, godDamnit, fast, allRewards, goldPlaque, silverPlaque, perfectBonus, streak, adBonus, score};
+  return {won, perfect, hubFirst, hubMiddle, ruleBreaker, purpleFirst, blueFirst, revRainbow, rainbow, grellow, grue, godDamnit, earlyBird, fast, allRewards, goldPlaque, silverPlaque, perfectBonus, streak, adBonus, score};
 }
 
 /* ---------- end ---------- */
@@ -996,7 +1003,7 @@ function showResult(won,score,fancy,quiet){
      quiet=true (used on a restored/finished game) builds the result + inline
      button without popping the modal open on every refresh. */
   document.getElementById("mbody").innerHTML=
-    "<h2>"+(calcScore().ruleBreaker?"Rule Breaker 💀":calcScore().godDamnit?"God Damnit! 😤":won?(mistakes===0?"Perfect! 🌟":"Solved!"):"Out of guesses 😵")+"</h2>"+
+    "<h2>"+(calcScore().ruleBreaker?"Rule Breaker 💀":calcScore().earlyBird?"Early Bird! 🌅":calcScore().godDamnit?"God Damnit! 😤":won?(mistakes===0?"Perfect! 🌟":"Solved!"):"Out of guesses 😵")+"</h2>"+
     "<div class='score'>"+(calcScore().ruleBreaker
       ?"<b style='color:#7a2e22'>"+score+" pts</b><br><span style='font-size:22px;font-weight:800;letter-spacing:1px;color:#7a2e22'>RULE BREAKER</span><br><span style='display:inline-block;margin-top:5px;font-size:13px;font-weight:400;color:#7a7264;line-height:1.4'>You put the shared word last in every guess. That's not what we wanted you to do.</span>"
       :(won?"<b>"+score+" pts</b>":"")+
@@ -1014,7 +1021,8 @@ function showResult(won,score,fancy,quiet){
          +(calcScore().grue?"<br><span style='color:#3f9b9b;font-weight:700'>Grue! 🦚</span>":"")
          +(calcScore().fast?"<br><span style='color:#0f8f86;font-weight:700'>Sub-90s bonus! +"+SPEED_BONUS+"</span> 💎":"")
          +(calcScore().streak>0?"<br><span style='color:#7d3fc4;font-weight:700'>"+calcScore().streak+"-day streak +"+calcScore().streak+"</span>":"")
-         +(calcScore().adBonus?"<br><span style='color:#b5603e;font-weight:700'>Thanks for clicking! +"+AD_BONUS+"</span>":"")))+"</div>"+
+         +(calcScore().adBonus?"<br><span style='color:#b5603e;font-weight:700'>Thanks for clicking! +"+AD_BONUS+"</span>":"")
+         +(calcScore().earlyBird?"<br><span style='color:#d4a017;font-weight:800'>Early Bird! 🌅</span>":"")))+"</div>"+
     "<div style='text-align:center;margin:12px 0'><img id='shareImg' alt='' style='width:78%;max-width:300px;border-radius:12px;box-shadow:0 2px 10px rgba(43,38,32,.15)'></div>"+
     "<div class='rowbtns'>"+
       "<button class='hbtn primary' onclick='shareImage(this)'>"+(IS_MOBILE?"Share image":"Copy image")+"</button>"+
@@ -1111,12 +1119,12 @@ function shineStreak(x,W,H,pos,alpha,wide){
   x.fillStyle=g; x.fillRect(0,0,W,H);
 }
 function drawShareCard(){
-  const {won,hubFirst,hubMiddle,ruleBreaker,purpleFirst,revRainbow,rainbow,godDamnit,fast,allRewards,goldPlaque,silverPlaque,score}=calcScore();
+  const {won,hubFirst,hubMiddle,ruleBreaker,purpleFirst,revRainbow,rainbow,godDamnit,earlyBird,fast,allRewards,goldPlaque,silverPlaque,score}=calcScore();
   const perfect=won&&mistakes===0;
   const plain=!(revRainbow||purpleFirst||hubFirst||hubMiddle||perfect);
   const S=2, M=14, W=420, R=26;
   const cell=44, gap=10, gridW=3*cell+2*gap;
-  const headH=(allRewards||godDamnit||rainbow)?156:(ruleBreaker?150:130), rows=guesses.length, footH=84;
+  const headH=(allRewards||godDamnit||rainbow||earlyBird)?156:(ruleBreaker?150:130), rows=guesses.length, footH=84;
   const H=headH+rows*(cell+gap)-gap+footH;
   const cv=document.createElement("canvas");
   cv.width=(W+2*M)*S; cv.height=(H+2*M)*S;
@@ -1183,9 +1191,13 @@ function drawShareCard(){
     x.fillStyle="#8a8174"; x.font="600 11px "+FONT; x.fillText("hankgreen.com/fourbythree",W/2,H-24);
     return cv;
   }
-  if(goldPlaque||silverPlaque||godDamnit){
-    /* ---- metal plaque: everything engraved into the metal (gold, silver, or the red "God Damnit!") ---- */
-    const P=goldPlaque?{
+  if(goldPlaque||silverPlaque||godDamnit||earlyBird){
+    /* ---- metal plaque: engraved gold / silver / red, or the gold-rainbow "Early Bird" ---- */
+    const P=earlyBird?{
+      g0:"#f7df93",g1:"#dcb442",g2:"#c89f24",g3:"#9c7c1b",hi:"rgba(255,249,214,.75)",grv:"rgba(86,58,8,.5)",
+      eL:"rgba(255,250,224,.5)",eD:"rgba(66,42,2,.5)",eF:"#8c6c15",sD:"rgba(74,48,4,.6)",sL:"rgba(255,249,214,.5)",
+      title:"Early Bird!"
+    }:goldPlaque?{
       g0:"#f7df93",g1:"#dcb442",g2:"#c89f24",g3:"#9c7c1b",hi:"rgba(255,249,214,.75)",grv:"rgba(86,58,8,.5)",
       eL:"rgba(255,250,224,.5)",eD:"rgba(66,42,2,.5)",eF:"#8c6c15",sD:"rgba(74,48,4,.6)",sL:"rgba(255,249,214,.5)",
       title:"Gold Plaque Unlocked!"
@@ -1202,6 +1214,14 @@ function drawShareCard(){
     const mg=x.createLinearGradient(0,0,W*0.5,H);
     mg.addColorStop(0,P.g0); mg.addColorStop(.42,P.g1); mg.addColorStop(.58,P.g2); mg.addColorStop(1,P.g3);
     x.fillStyle=mg; x.fillRect(0,0,W,H);
+    if(earlyBird){
+      const rbg=x.createLinearGradient(0,0,W,H);   /* gold gets a translucent rainbow wash */
+      [COLORS[2],COLORS[1],COLORS[0],COLORS[3]].forEach((c,i)=>rbg.addColorStop(i/3,c));
+      x.globalAlpha=0.22; x.fillStyle=rbg; x.fillRect(0,0,W,H); x.globalAlpha=1;
+      x.save(); x.globalAlpha=0.12; x.font="30px "+FONT; x.textAlign="center";   /* faint clock pattern */
+      for(let cy2=22,row=0; cy2<H; cy2+=44,row++) for(let cx2=20+(row%2?26:0); cx2<W; cx2+=52) x.fillText("⏰",cx2,cy2);
+      x.restore();
+    }
     shineStreak(x,W,H,0.30,0.32,0.09); shineStreak(x,W,H,0.72,0.16,0.05);
     x.restore();
     rr(x,3.5,3.5,W-7,H-7,R-3.5); x.strokeStyle=P.hi; x.lineWidth=2.5; x.stroke();
@@ -1488,7 +1508,7 @@ function recordHistory(){
     const h=JSON.parse(localStorage.getItem("x43_history")||"{}");
     h[dailyKey]={s:cs.score, m:mistakes, w:cs.won?1:0, ms:solveMs,
       hf:cs.hubFirst?1:0, hm:cs.hubMiddle?1:0, pf:cs.purpleFirst?1:0, bf:cs.blueFirst?1:0,
-      rr:cs.revRainbow?1:0, rw:cs.rainbow?1:0, gr:cs.grellow?1:0, gu:cs.grue?1:0, gd:cs.godDamnit?1:0,
+      rr:cs.revRainbow?1:0, rw:cs.rainbow?1:0, gr:cs.grellow?1:0, gu:cs.grue?1:0, gd:cs.godDamnit?1:0, eb:cs.earlyBird?1:0,
       fast:cs.fast?1:0, rb:cs.ruleBreaker?1:0, p:cs.perfect?1:0,
       gold:cs.goldPlaque?1:0, silver:cs.silverPlaque?1:0,
       rel:(dailyKey===todayStr())?1:0,   /* played on its release day → counts toward the streak */
