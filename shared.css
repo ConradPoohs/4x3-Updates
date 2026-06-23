@@ -192,14 +192,16 @@
   #deftip.show{opacity:1; transform:translateY(0);}
   /* ---------- "Humans" promo (Hank's podcast) ---------- */
   /* mobile / narrow: a slim note under the tagline */
-  .promo-banner{display:block; margin:10px auto 0; max-width:520px; text-align:center;
+  .promo-banner{position:relative; overflow:visible; display:block; margin:20px auto 0; max-width:520px; text-align:left;
     color:#3a3128; background:linear-gradient(115deg,#dee8fb,#def0e3 34%,#f9efcd 67%,#ebdff8);
-    border:1.5px solid rgba(120,100,150,.28); border-radius:14px; padding:9px 16px;
+    border:1.5px solid rgba(120,100,150,.28); border-radius:14px; padding:9px 16px 9px 70px;
     font-size:12.5px; line-height:1.45;}
   .promo-banner i, .promo-body i{font-style:italic;}
   .promo-banner a, .promo-body a{color:#7d3fc4; font-weight:700; text-decoration:underline; text-underline-offset:2px;}
   .promo-banner a:hover, .promo-body a:hover{color:#5b8def;}
   .promo-banner a:focus-visible, .promo-body a:focus-visible{outline:none; border-radius:3px; box-shadow:0 0 0 2px var(--paper),0 0 0 4px #1f6feb;}
+  /* bean stands with feet inside the bar, head poking out the top, on the left */
+  .promo-bean{position:absolute; left:8px; bottom:2px; transform:scaleX(-1); height:86px; width:auto; margin:0;}
   /* desktop sidebar version is hidden until there's a clear gutter to put it in */
   .promo-side{display:none;}
   @media (min-width:1200px){
@@ -213,6 +215,12 @@
       box-shadow:0 8px 24px rgba(80,50,120,.16); z-index:40;}
     .promo-kicker{font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:#8a6fb0; font-weight:700;}
     .promo-body{font-size:13.5px; line-height:1.5; color:#3a3128; margin:5px 0 0;}
+    .promo-img{display:block; width:130px; max-width:80%; margin:0 auto 4px;}
+    .promo-apps{display:flex; gap:8px; margin-top:11px;}
+    .promo-apps a{flex:1; text-align:center; text-decoration:none; font-size:13px; font-weight:700;
+      color:#7d3fc4; border:1.5px solid rgba(125,63,196,.45); border-radius:999px; padding:6px 8px;}
+    .promo-apps a:hover{background:rgba(125,63,196,.12);}
+    .promo-apps a:focus-visible{outline:none; box-shadow:0 0 0 2px var(--paper),0 0 0 4px #1f6feb;}
   }
   /* ---------- history page ---------- */
   /* big streak hero in the signature four-colour gradient */
