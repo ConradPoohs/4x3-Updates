@@ -19,6 +19,7 @@
 <script defer src="/_vercel/insights/script.js"></script>
 <link rel="stylesheet" href="shared.css">
 <script src="shared.js"></script>
+<script src="stats-beacon.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -137,6 +138,7 @@ let puzzleData=null; /* last good puzzles.json, reused by the archive */
 let cats=[], special="", slots=[], slots0=[], tiles={};
 let selection=[], solvedIdx=[], colorCat={}, locked=new Set();
 let mistakes=0, penalty=0, guesses=[], over=false, animating=false;
+let adClicked=false;   /* +AD_BONUS once per game if the player taps the ad */
 let startTime=0, solveMs=null; /* speed timer: starts on load, stops at the finish */
 let hubEmoji=null; /* emoji that bursts from the hub on the post-win tap (custom puzzles carry their own) */
 const MAXM=3;
@@ -267,7 +269,7 @@ function loadGame(){
 }
 function saveGame(){
   const k=gameKey(); if(!k) return;
-  try{ localStorage.setItem(k,JSON.stringify({v:1,s:special,slots0,solved:solvedIdx,m:mistakes,p:penalty,g:guesses,over,t0:startTime,sms:solveMs})); }catch(e){}
+  try{ localStorage.setItem(k,JSON.stringify({v:1,s:special,slots0,solved:solvedIdx,m:mistakes,p:penalty,g:guesses,over,t0:startTime,sms:solveMs,ad:adClicked?1:0})); }catch(e){}
 }
 /* Rebuild the board state from a saved game, no animations, without
    re-counting stats (those were tallied once, on the real finish). */
@@ -285,6 +287,7 @@ function restoreGame(st){
     }
   });
   mistakes=Math.min(MAXM,st.m||0);
+  adClicked=!!st.ad;
   penalty=(st.p!==undefined)?st.p:(st.m||0)*15;
   startTime=st.t0||Date.now(); solveMs=(st.sms!==undefined)?st.sms:null;
   guesses=Array.isArray(st.g)?st.g:[];
@@ -343,7 +346,7 @@ function startGame(){
   if(hubSpinTween){ hubSpinTween.kill(); hubSpinTween=null; }
   hubFx.forEach(tw=>tw.kill()); hubFx=[];
   selection=[]; solvedIdx=[]; colorCat={}; locked=new Set();
-  mistakes=0; penalty=0; guesses=[]; over=false; animating=false;
+  mistakes=0; penalty=0; guesses=[]; over=false; animating=false; adClicked=false;
   startTime=Date.now(); solveMs=null;
   fb={diff:0,fun:0,special:""};
   document.getElementById("boardWrap").style.display="";
@@ -881,8 +884,10 @@ function calcScore(){
   score+=perfectBonus;
   const streak=(won&&dailyKey===todayStr())?streakWithToday():0;  /* +1/day of streak — release-day plays only */
   score+=streak;
+  const adBonus=(won&&adClicked)?AD_BONUS:0;       /* thanks for clicking the ad */
+  score+=adBonus;
   if(ruleBreaker){ score=RULE_BREAKER_SCORE; allRewards=false; goldPlaque=false; silverPlaque=false; perfectBonus=0; } /* RULE BREAKER trumps everything */
-  return {won, perfect, hubFirst, hubMiddle, ruleBreaker, purpleFirst, blueFirst, revRainbow, rainbow, grellow, grue, godDamnit, fast, allRewards, goldPlaque, silverPlaque, perfectBonus, streak, score};
+  return {won, perfect, hubFirst, hubMiddle, ruleBreaker, purpleFirst, blueFirst, revRainbow, rainbow, grellow, grue, godDamnit, fast, allRewards, goldPlaque, silverPlaque, perfectBonus, streak, adBonus, score};
 }
 
 /* ---------- end ---------- */
@@ -1008,7 +1013,8 @@ function showResult(won,score,fancy,quiet){
          +(calcScore().grellow?"<br><span style='color:#56b870;font-weight:700'>Grellow! 🎾</span>":"")
          +(calcScore().grue?"<br><span style='color:#3f9b9b;font-weight:700'>Grue! 🦚</span>":"")
          +(calcScore().fast?"<br><span style='color:#0f8f86;font-weight:700'>Sub-90s bonus! +"+SPEED_BONUS+"</span> 💎":"")
-         +(calcScore().streak>0?"<br><span style='color:#7d3fc4;font-weight:700'>"+calcScore().streak+"-day streak +"+calcScore().streak+"</span>":"")))+"</div>"+
+         +(calcScore().streak>0?"<br><span style='color:#7d3fc4;font-weight:700'>"+calcScore().streak+"-day streak +"+calcScore().streak+"</span>":"")
+         +(calcScore().adBonus?"<br><span style='color:#b5603e;font-weight:700'>Thanks for clicking! +"+AD_BONUS+"</span>":"")))+"</div>"+
     "<div style='text-align:center;margin:12px 0'><img id='shareImg' alt='' style='width:78%;max-width:300px;border-radius:12px;box-shadow:0 2px 10px rgba(43,38,32,.15)'></div>"+
     "<div class='rowbtns'>"+
       "<button class='hbtn primary' onclick='shareImage(this)'>"+(IS_MOBILE?"Share image":"Copy image")+"</button>"+
@@ -1398,6 +1404,7 @@ function saveBlob(blob,btn){
   flashBtn(btn,"Downloaded!");
 }
 function shareImage(btn){
+  try{ if(window.x43share&&dailyKey) x43share(dailyKey); }catch(e){}
   drawShareCard().toBlob(async blob=>{
     if(!blob){ flashBtn(btn,"Couldn't render"); return; }
     /* phones: real share sheet. desktop: clipboard (share sheets there often
@@ -1488,6 +1495,14 @@ function recordHistory(){
       ts:Date.now()};
     localStorage.setItem("x43_history",JSON.stringify(h));
   }catch(e){}
+  /* anonymous, fire-and-forget telemetry to the stats Worker (no PII) */
+  try{
+    if(window.x43beacon){
+      const cs2=calcScore();
+      x43beacon({p:dailyKey, rel:(dailyKey===todayStr())?1:0, w:cs2.won?1:0,
+        m:mistakes, s:cs2.score, ms:solveMs, st:streakWithToday()});
+    }
+  }catch(e){}
   /* also stash the rendered share card PNG (separate, capped key so images can't
      bloat the stats; trims the oldest if we ever hit the storage quota) */
   try{
@@ -1501,6 +1516,13 @@ function recordHistory(){
       catch(err){ const o=Object.keys(cards).sort(); if(o.length<=1) break; delete cards[o[0]]; }
     }
   }catch(e){}
+}
+/* tapping the ad grants +AD_BONUS for this game. If the game's already finished,
+   re-tally the result quietly so the bonus shows without re-popping the modal. */
+function onAdClick(){
+  if(adClicked) return;
+  adClicked=true; saveGame();
+  if(over){ recordHistory(); const cs=calcScore(); showResult(cs.won,cs.score,false,true); }
 }
 /* current consecutive-day streak from this browser's history (matches history.html) */
 function currentStreak(){
@@ -1581,6 +1603,8 @@ function toast(msg,ms){
   window.addEventListener("scroll",hide,true);
 })();
 
+/* +5 for tapping the ad (banner or sidebar) */
+document.addEventListener("click",e=>{ if(e.target.closest&&e.target.closest(".promo-banner a, .promo-side a")) onAdClick(); });
 window.addEventListener("hashchange",init);
 init();
 showStreakTag();

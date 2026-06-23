@@ -10,6 +10,7 @@ const TINTS=["#e8effc","#e6f4ea","#fcf3d7","#f1e8fa"];
 const MISS=15, MISS_LATE=30;
 const HUB_BONUS=20, HUB_MID_BONUS=20;
 const PURPLE_BONUS=15, RAINBOW_BONUS=30, SPEED_BONUS=30, BLUE_BONUS=5;
+const AD_BONUS=5;   /* clicking the ad this game */
 const RULE_BREAKER_SCORE=-100;
 /* solve-order achievements (category indices: 0 blue, 1 green, 2 yellow, 3 purple) */
 const REV_RAINBOW=[3,0,1,2];          /* purple → blue → green → yellow (+30) */
