@@ -612,16 +612,17 @@ async function loadPoll(){
   try{ const r=await fetch("/api/hubpoll?w="+Math.floor(Date.now()/300000)); if(r.ok){ const j=await r.json(); if(j&&j.active){ pollCfg=j; return; } } }catch(e){}
   try{ const r=await fetch(pjURL("hubpoll.json"),{cache:"no-store"}); if(r.ok) pollCfg=await r.json(); }catch(e){}
 }
-/* live poll options (with positive weight) while a poll is running, else null */
-function pollOptions(){
+/* one weighted emoji for the current 5-minute window — same emoji for everyone in that
+   window; over time each shows up in proportion to the vote counts */
+function pollEmoji(){
   if(!pollCfg||!pollCfg.active||!Array.isArray(pollCfg.options)) return null;
   const opts=pollCfg.options.filter(o=>o&&o.emoji&&o.weight>0);
-  return opts.length?opts:null;
-}
-/* one weighted-random emoji, drawn in proportion to the current vote counts */
-function pollPick(opts){
+  if(!opts.length) return null;
   const total=opts.reduce((a,o)=>a+o.weight,0);
-  let r=Math.random()*total, acc=0;
+  const slot=Math.floor(Date.now()/300000);            /* 5-minute window */
+  let h=(slot*2654435761)>>>0; h^=h>>>15; h=Math.imul(h,2246822519)>>>0; h^=h>>>13; /* uniform 0..1 from the slot */
+  const r=(h>>>0)/4294967296*total;
+  let acc=0;
   for(const o of opts){ acc+=o.weight; if(r<acc) return o.emoji; }
   return opts[opts.length-1].emoji;
 }
@@ -651,6 +652,12 @@ const DEFS={
     "Things You Press":{KEY:"You press a key on a keyboard.",DOORBELL:"The button on a house you press instead of knocking.",BUTTON:"You press a button to make something happen."},
     "Clothing Fasteners":{ZIPPER:"Joins two edges of fabric with interlocking teeth.",CLASP:"A fastener that hooks two things together.",BUTTON:"Slips through a buttonhole to fasten clothing."},
     "F1 World Champions":{HAMILTON:"Lewis Hamilton, seven-time Formula 1 World Champion.",VETTEL:"Sebastian Vettel, four-time F1 World Champion.",BUTTON:"Jenson Button, the 2009 Formula 1 World Champion."}
+  },
+  DARK:{
+    "Evil or Menacing":{GRIM:"Harsh, forbidding, and gloomy.",SINISTER:"Hinting that something evil is coming.",DARK:"Sinister or troubled, as in 'a dark mood.'"},
+    "Types of Chocolate":{MILK:"Milk chocolate — sweet and creamy, made with milk.",WHITE:"White chocolate — cocoa butter and sugar, no cocoa solids.",DARK:"Dark chocolate — rich and bittersweet, heavy on cocoa."},
+    "Lacking Light":{DIM:"Faintly lit; not bright.",MURKY:"Dim and cloudy; hard to see through.",DARK:"With little or no light."},
+    "Contains \"ARK\"":{SHARK:"Has 'ARK' inside it: sh-ARK.",SPARK:"Has 'ARK' inside it: sp-ARK.",DARK:"Has 'ARK' inside it: d-ARK."}
   }
 };
 /* post-game easter egg: tap the hub to press it in and burst out emojis */
@@ -659,11 +666,11 @@ function hubPop(){
   const inner=t.querySelector(".tin");
   if(G){ G.killTweensOf(inner,"scale"); G.timeline().set(inner,{scale:1}).to(inner,{scale:0.85,duration:.09,ease:"power2.in"}).to(inner,{scale:1,duration:.22,ease:"back.out(2.2)"}); }
   const b=document.getElementById("board");
-  const opts=pollOptions();   /* if a poll is live, each emoji is drawn ∝ the vote counts */
-  const cx=t._sx+TW/2, cy=t._sy+TH/2, he=hubEmoji, solo=SOLO_POP[special];
+  const poll=pollEmoji();   /* while a poll is live it overrides the per-puzzle hub emoji (one per 5-min window) */
+  const cx=t._sx+TW/2, cy=t._sy+TH/2, he=poll||hubEmoji, solo=poll||SOLO_POP[special];
   for(let i=0;i<12;i++){
     const e=document.createElement("div");
-    e.textContent=opts?pollPick(opts):(solo?solo:(he&&(i===0||Math.random()<0.3))?he:POP_EMOJI[Math.floor(Math.random()*POP_EMOJI.length)]);
+    e.textContent=solo?solo:(he&&(i===0||Math.random()<0.3))?he:POP_EMOJI[Math.floor(Math.random()*POP_EMOJI.length)];
     e.style.cssText="position:absolute;left:"+(cx-12)+"px;top:"+(cy-12)+"px;font-size:"+(18+Math.random()*14)+"px;pointer-events:none;z-index:30;will-change:transform;";
     b.appendChild(e);
     if(G){
