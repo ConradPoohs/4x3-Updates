@@ -894,7 +894,14 @@ function calcScore(){
   const adBonus=(won&&adClicked)?AD_BONUS:0;       /* thanks for clicking the ad */
   score+=adBonus;
   if(ruleBreaker){ score=RULE_BREAKER_SCORE; allRewards=false; goldPlaque=false; silverPlaque=false; perfectBonus=0; } /* RULE BREAKER trumps everything */
-  return {won, perfect, hubFirst, hubMiddle, ruleBreaker, purpleFirst, blueFirst, revRainbow, rainbow, grellow, grue, godDamnit, dayBefore, fast, allRewards, goldPlaque, silverPlaque, perfectBonus, streak, adBonus, score};
+  /* personal-best / above-average badges (0 points). Compared against this browser's
+     OTHER dailies, excluding today's own entry, so they stay stable on re-render. */
+  const past=dailyKey?otherDailyScores(dailyKey):[];
+  const prevBest=past.length?Math.max.apply(null,past):null;
+  const prevAvg=past.length?past.reduce((a,b)=>a+b,0)/past.length:null;
+  const topScore=won&&prevBest!==null&&score>prevBest;                 /* a new all-time high */
+  const beatAvg=won&&prevAvg!==null&&score>prevAvg&&!topScore;          /* above your average (top score already implies it) */
+  return {won, perfect, hubFirst, hubMiddle, ruleBreaker, purpleFirst, blueFirst, revRainbow, rainbow, grellow, grue, godDamnit, dayBefore, fast, allRewards, goldPlaque, silverPlaque, perfectBonus, streak, adBonus, topScore, beatAvg, score};
 }
 
 /* ---------- end ---------- */
@@ -989,17 +996,19 @@ function confettiBurst(x,y){
    move the counter; achievement-only items have delta 0. Sum of deltas + 100 = score. */
 function tallyItems(cs){
   const it=[];
-  if(cs.ruleBreaker){ it.push(["💀","Rule Breaker — the shared word went last every guess",cs.score-100]); return it; }
-  if(penalty>0) it.push(["💔",(mistakes+" mistake"+(mistakes===1?"":"s"))+" −"+penalty,-penalty]);
-  if(cs.hubFirst) it.push(["🔝","Hub First +"+HUB_BONUS,HUB_BONUS]);
-  if(cs.hubMiddle) it.push(["↔️","Hub Middle +"+HUB_MID_BONUS,HUB_MID_BONUS]);
-  if(cs.blueFirst) it.push(["🔵","Blue First +"+BLUE_BONUS,BLUE_BONUS]);
-  if(cs.purpleFirst) it.push(["🟣","Purple First +"+PURPLE_BONUS,PURPLE_BONUS]);
-  if(cs.revRainbow) it.push(["🌈","Reverse Rainbow +"+RAINBOW_BONUS,RAINBOW_BONUS]);
-  if(cs.fast) it.push(["⚡","Sub-90s +"+SPEED_BONUS,SPEED_BONUS]);
-  if(cs.perfectBonus) it.push(["💯","Perfect Game +"+cs.perfectBonus,cs.perfectBonus]);
-  if(cs.streak>0) it.push(["🔥",cs.streak+"-day streak +"+cs.streak,cs.streak]);
-  if(cs.adBonus) it.push(["📣","Ad click +"+cs.adBonus,cs.adBonus]);
+  if(cs.ruleBreaker){ it.push(["💀","Rule Breaker — shared word went last every guess",cs.score-100]); return it; }
+  if(penalty>0) it.push(["💔",mistakes+" mistake"+(mistakes===1?"":"s"),-penalty]);
+  if(cs.hubFirst) it.push(["🔝","Hub First",HUB_BONUS]);
+  if(cs.hubMiddle) it.push(["↔️","Hub Middle",HUB_MID_BONUS]);
+  if(cs.blueFirst) it.push(["🔵","Blue First",BLUE_BONUS]);
+  if(cs.purpleFirst) it.push(["🟣","Purple First",PURPLE_BONUS]);
+  if(cs.revRainbow) it.push(["🌈","Reverse Rainbow",RAINBOW_BONUS]);
+  if(cs.fast) it.push(["⚡","Solved under 90 seconds",SPEED_BONUS]);
+  if(cs.perfectBonus) it.push(["💯","Perfect Game",cs.perfectBonus]);
+  if(cs.streak>0) it.push(["🔥",cs.streak+"-day streak",cs.streak]);
+  if(cs.adBonus) it.push(["📣","Thanks for the tap",cs.adBonus]);
+  if(cs.topScore) it.push(["🏆","Top Score — a new personal best!",0]);
+  if(cs.beatAvg) it.push(["📈","Above Average — beat your average",0]);
   if(cs.perfect&&!cs.allRewards&&!cs.godDamnit) it.push(["✨","Perfect — no mistakes",0]);
   if(cs.rainbow) it.push(["🏳️‍🌈","Rainbow — yellow → green → blue → purple",0]);
   if(cs.grellow) it.push(["🎾","Grellow — purple → blue → yellow → green",0]);
@@ -1010,39 +1019,57 @@ function tallyItems(cs){
   else if(cs.silverPlaque) it.push(["🥈","Silver Plaque — perfect, under 120s",0]);
   return it;
 }
-function icoHTML(it){ return "<div class='tally-ico' data-def=\""+esc(it[1])+"\">"+it[0]+"</div>"; }
+/* build one readable award row from [emoji, label, point delta]. The delta shows
+   as a coloured +N / −N; achievements (delta 0) show just icon + label on a gold row. */
+function tallyRow(item){
+  const emoji=item[0], label=item[1], delta=item[2];
+  const row=document.createElement("div");
+  row.className="tally-row"+(delta>0?" pos":delta<0?" neg":" ach");
+  row.setAttribute("data-def",label+(delta?" "+(delta>0?"+":"")+delta:""));
+  const dtxt=delta?((delta>0?"+":"")+delta):"";
+  row.innerHTML="<span class='tr-ico'>"+emoji+"</span><span class='tr-label'>"+esc(label)+"</span>"+
+    "<span class='tr-delta'>"+dtxt+"</span>";
+  return row;
+}
 /* static (no animation) — used when re-opening a finished game */
 function renderTallyStatic(score){
-  const c=document.getElementById("tallyCount"), ic=document.getElementById("tallyIcons");
+  const c=document.getElementById("tallyCount"), ls=document.getElementById("tallyList");
   if(!c) return;
   c.textContent=score;
-  ic.innerHTML=tallyItems(calcScore()).map(icoHTML).join("");
+  ls.innerHTML="";
+  tallyItems(calcScore()).forEach(it=>ls.appendChild(tallyRow(it)));
 }
-/* animated — counter pops at 100 then counts up/down as each icon appears, share fades in after */
+/* animated — the counter pops in at 100, then each award row slides in one by one
+   and the running total counts up/down to meet it; the share card fades in after */
 function runModalTally(score){
-  const c=document.getElementById("tallyCount"), ic=document.getElementById("tallyIcons"), wrap=document.getElementById("shareWrap");
+  const c=document.getElementById("tallyCount"), ls=document.getElementById("tallyList"), wrap=document.getElementById("shareWrap");
   if(!c) return;
   if(!G){ renderTallyStatic(score); if(wrap) wrap.style.opacity=""; return; }
   const items=tallyItems(calcScore());
-  c.textContent="100"; ic.innerHTML="";
+  c.textContent="100"; ls.innerHTML="";
   if(wrap) G.set(wrap,{opacity:0});
-  G.fromTo(c,{scale:.6,opacity:0},{scale:1,opacity:1,duration:.3,ease:"back.out(2)"});
+  G.fromTo(c,{scale:.55,opacity:0},{scale:1,opacity:1,duration:.4,ease:"back.out(2)"});
   let cur=100;
-  function bump(v){ const o={v:cur}; cur=v;
-    G.to(o,{v:v,duration:.3,ease:"power1.out",onUpdate:()=>{c.textContent=Math.round(o.v);}});
-    G.fromTo(c,{scale:1.2},{scale:1,duration:.28,ease:"power2.out"});
-    G.fromTo(c,{x:(Math.random()<.5?-3:3)},{x:0,duration:.3,ease:"elastic.out(1,.45)"}); }
-  const STEP=0.42; let time=0.3, acc=100;
-  const tl=G.timeline({onComplete:()=>{ if(wrap) G.to(wrap,{opacity:1,duration:.4,delay:.25}); }});
+  function bump(v,big){ const from=cur; const o={v:from}; cur=v;
+    G.to(o,{v:v,duration:.45,ease:"power1.out",onUpdate:()=>{c.textContent=Math.round(o.v);}});
+    G.fromTo(c,{scale:big?1.5:1.26},{scale:1,duration:big?.7:.45,ease:"elastic.out(1,.5)"});
+    G.fromTo(c,{color:(v>=from?"#56b870":"#d05b5b")},{color:"#2b2620",duration:.6,ease:"power2.out"}); }
+  const STEP=0.5; let time=0.45, acc=100;
+  const tl=G.timeline({onComplete:()=>{
+    G.fromTo(c,{scale:1.16},{scale:1,duration:.7,ease:"elastic.out(1,.4)"});
+    if(wrap) G.to(wrap,{opacity:1,duration:.45,delay:.2});
+  }});
   items.forEach(it=>{
-    acc+=it[2]; const target=acc;
-    ((item,tgt)=>{ tl.add(()=>{
-      const box=document.createElement("div"); box.className="tally-ico"; box.textContent=item[0]; box.setAttribute("data-def",item[1]);
-      ic.appendChild(box);
-      G.fromTo(box,{opacity:0,scale:.5},{opacity:1,scale:1,duration:.26,ease:"back.out(2.2)"});
-      const r=box.getBoundingClientRect(); confettiBurst(r.left+r.width/2,r.top+r.height/2);
-      if(item[2]!==0) bump(tgt);
-    }, time); })(it,target);
+    acc+=it[2]; const target=acc, big=Math.abs(it[2])>=20;
+    ((item,tgt,big)=>{ tl.add(()=>{
+      const row=tallyRow(item); ls.appendChild(row);
+      G.fromTo(row,{opacity:0,x:-28,scale:.9},{opacity:1,x:0,scale:1,duration:.44,ease:"back.out(1.6)"});
+      const d=row.querySelector(".tr-delta");
+      if(d&&item[2]) G.fromTo(d,{scale:1.9,opacity:0},{scale:1,opacity:1,duration:.5,ease:"back.out(2.6)",delay:.05});
+      const r=row.getBoundingClientRect(); confettiBurst(r.right-16,r.top+r.height/2);
+      if(item[2]!==0) bump(tgt,big);
+      else G.fromTo(c,{scale:1.12},{scale:1,duration:.45,ease:"power2.out"});
+    }, time); })(it,target,big);
     time+=STEP;
   });
   if(!items.length) confettiBurst(innerWidth/2, innerHeight/2);   /* plain win: a little celebration anyway */
@@ -1079,15 +1106,13 @@ function showResult(won,score,fancy,quiet){
      button without popping the modal open on every refresh. */
   document.getElementById("mbody").innerHTML=
     (won
-      ? "<div class='tally-count' id='tallyCount'>"+(quiet?score:100)+"</div><div class='tally-icons' id='tallyIcons'></div>"
+      ? "<div class='tally-count' id='tallyCount'>"+(quiet?score:100)+"</div><div class='tally-list' id='tallyList'></div>"
       : "<h2>Out of guesses 😵</h2><div class='score'>"+(mistakes?mistakes+" mistake"+(mistakes===1?"":"s"):"No mistakes")+"</div>")+
     "<div id='shareWrap' style='text-align:center;margin:12px 0'><img id='shareImg' alt='' style='width:78%;max-width:300px;border-radius:12px;box-shadow:0 2px 10px rgba(43,38,32,.15)'></div>"+
     "<div class='rowbtns'>"+
-      "<button class='hbtn primary' onclick='shareImage(this)'>"+(IS_MOBILE?"Share image":"Copy image")+"</button>"+
-      "<button class='hbtn' onclick='downloadImage(this)'>Download</button>"+
-      "<button class='hbtn' onclick='copyText(resultDescription(),this)'>Copy description</button>"+
-      (location.hash.startsWith("#p=")?"<button class='hbtn' onclick='copyText(location.href,this)'>Copy link</button>":"")+
-      (pendingKey?"<button class='hbtn primary' onclick='closeModal();init()'>Play today's puzzle</button>":"")+
+      "<button class='hbtn primary' onclick='shareImage(this)'>"+(CAN_SHARE_FILES?"Share image":"Copy image")+"</button>"+
+      "<button class='hbtn primary' onclick='shareTextResult(this)'>"+(CAN_SHARE?"Share text":"Copy text")+"</button>"+
+      (pendingKey?"<button class='hbtn' onclick='closeModal();init()'>Play today's puzzle</button>":"")+
     "</div>";
   const shareImg=document.getElementById("shareImg");
   try{ shareImg.src=drawShareCard().toDataURL("image/png"); shareImg.style.display=""; }
@@ -1462,36 +1487,45 @@ function drawShareCard(){
   x.textAlign="center";
   return cv;
 }
-const IS_MOBILE=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Mac/.test(navigator.userAgent));
+/* feature-detect the Web Share API rather than sniffing the user agent */
+const CAN_SHARE=typeof navigator!=="undefined"&&typeof navigator.share==="function";
+const CAN_SHARE_FILES=(()=>{ try{ return !!(navigator.canShare&&navigator.canShare({files:[new File([new Blob()],"x.png",{type:"image/png"})]})); }catch(e){ return false; } })();
+/* the link attached when sharing: a direct puzzle link shares its own URL; the daily shares the canonical page */
+function shareUrl(){ return /^#(p|d|b)=/.test(location.hash)?location.href:"https://hankgreen.com/fourbythree"; }
 function flashBtn(btn,msg){ if(btn){const o=btn.textContent; btn.textContent=msg; setTimeout(()=>btn.textContent=o,1600);} }
-function saveBlob(blob,btn){
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob); a.download="4x3-result.png"; a.click();
-  setTimeout(()=>URL.revokeObjectURL(a.href),5000);
-  flashBtn(btn,"Downloaded!");
-}
+/* Share Image — native share sheet with the picture, plus the text recap and the
+   game URL. Some share targets drop attached text/url when an image is present, so
+   the URL is also baked legibly into the card itself (see drawShareCard) as the
+   screenshot fallback. No share API (e.g. most desktops) → copy the PNG to the
+   clipboard. Never downloads. */
 function shareImage(btn){
   try{ if(window.x43share&&dailyKey) x43share(dailyKey); }catch(e){}
   drawShareCard().toBlob(async blob=>{
     if(!blob){ flashBtn(btn,"Couldn't render"); return; }
-    /* phones: real share sheet. desktop: clipboard (share sheets there often
-       list apps that can't actually send) with download as the fallback. */
-    if(IS_MOBILE){
-      const file=new File([blob],"4x3-result.png",{type:"image/png"});
-      if(navigator.canShare&&navigator.canShare({files:[file]})){
-        try{ await navigator.share({files:[file],title:"4×3"}); return; }
-        catch(e){ if(e&&e.name==="AbortError") return; }
-      }
+    const file=new File([blob],"4x3-result.png",{type:"image/png"});
+    if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+      try{ await navigator.share({files:[file],text:resultDescription(true),url:shareUrl(),title:"4 × 3"}); return; }
+      catch(e){ if(e&&e.name==="AbortError") return; }   /* user dismissed the sheet: stop, don't fall through */
     }
     try{
       await navigator.clipboard.write([new ClipboardItem({"image/png":blob})]);
       flashBtn(btn,"Image copied!"); return;
     }catch(e){}
-    saveBlob(blob,btn);
+    flashBtn(btn,"Couldn't share");
   },"image/png");
 }
-function downloadImage(btn){
-  drawShareCard().toBlob(blob=>{ if(blob) saveBlob(blob,btn); },"image/png");
+/* Share Text — native share with the URL in its own field so chat apps render it
+   as a tappable link instead of inline text. No share API → copy the recap plus the
+   link to the clipboard. */
+function shareTextResult(btn){
+  try{ if(window.x43share&&dailyKey) x43share(dailyKey); }catch(e){}
+  (async()=>{
+    if(navigator.share){
+      try{ await navigator.share({title:"4 × 3",text:resultDescription(true),url:shareUrl()}); return; }
+      catch(e){ if(e&&e.name==="AbortError") return; }
+    }
+    copyText(resultDescription(true)+"\n"+shareUrl(),btn);
+  })();
 }
 
 /* ---------- beta feedback ---------- */
@@ -1515,15 +1549,15 @@ function ynPaint(){
   document.querySelectorAll("#fbSpecial button").forEach(b=>b.classList.toggle("on",b.textContent===fb.special));
 }
 /* Text / emoji recap of the result — doubles as the share image's alt text and
-   the "Copy description" payload. Hub shows as 🌟, each other word as its
+   the shared text payload. Hub shows as 🌟, each other word as its
    category colour. */
 function resultEmojiRows(){
   return guesses.map(g=>g.map(w=>w===special?"🌟":EMOJI[cats.findIndex(c=>c.words.includes(w))]||"⬜").join("")).join("\n");
 }
-function resultDescription(){
+function resultDescription(noLink){
   const {won,score,ruleBreaker}=calcScore();
   const head="4 × 3"+(dailyKey?"\n"+fmtDate(dailyKey):"");
-  const link="\nhankgreen.com/fourbythree";
+  const link=noLink?"":"\nhankgreen.com/fourbythree";
   if(ruleBreaker) return head+"\n"+score+" points • RULE BREAKER 💀\n"+resultEmojiRows()+link;
   return head+"\n"+(won?score+" points":"Out of guesses")+" • "+(mistakes?mistakes+" mistake"+(mistakes===1?"":"s"):"No mistakes")+"\n"+resultEmojiRows()+link;
 }
@@ -1622,6 +1656,14 @@ function streakWithToday(){
   let d=dn(todayStr()); set.add(d);          /* finishing today's daily counts today */
   let c=0; while(set.has(d)){ c++; d--; }     /* consecutive release-days ending today */
   return c;
+}
+/* every other daily's final score from this browser's history (excluding one date) —
+   powers the Top Score and Above Average badges */
+function otherDailyScores(excl){
+  let h; try{ h=JSON.parse(localStorage.getItem("x43_history")||"{}"); }catch(e){ return []; }
+  const out=[];
+  for(const k in h){ if(k!==excl&&h[k]&&typeof h[k].s==="number") out.push(h[k].s); }
+  return out;
 }
 function loadStats(){ try{return JSON.parse(localStorage.getItem("x43_stats"))||{};}catch(e){return {};} }
 function saveStats(won,score,m){
