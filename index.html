@@ -682,6 +682,12 @@ const DEFS={
     "Where a Match Is Played":{FIELD:"The playing area.",GROUND:"British for a sports stadium or field.",PITCH:"British for a sports field, as in a football pitch."},
     "To Throw a Baseball":{TOSS:"Throw lightly.",HURL:"Throw hard.",PITCH:"Throw the ball to the batter."},
     "Famously black things":{JET:"A glossy-black gemstone — actually a form of coal.",COAL:"The combustible fossil-fuel rock.",PITCH:"A dark resin produced after distilling coal tar."}
+  },
+  WALLET:{
+    "Found in a Pocket":{KEYS:"Your keys — you pat your pocket to find them.",PHONE:"Once wired to a wall, now a pocket computer.",WALLET:"A wallet rides in your pocket (or bag)."},
+    "Made of Leather":{BOOT:"Classic boots are made of leather.",BELT:"The classic belt is a strip of leather.",WALLET:"The classic wallet is folded leather."},
+    "Pre-Installed on iPhone":{SAFARI:"Apple's built-in web browser.",PHOTOS:"The stock iPhone photo library.",WALLET:"Apple's app for cards, passes, and payments."},
+    "Foldable Item":{FAN:"A folding hand fan opens with a flick.",MAP:"A paper road map folds down small.",WALLET:"A billfold wallet folds in half."}
   }
 };
 /* post-game easter egg: tap the hub to press it in and burst out emojis */
@@ -991,12 +997,14 @@ function confettiBurst(x,y){
     G.to(p,{x:Math.cos(a)*d,y:Math.sin(a)*d,rotation:Math.random()*360,opacity:0,duration:.6+Math.random()*.3,ease:"power2.out",onComplete:()=>p.remove()});
   }
 }
-/* count-up score tally — achievements pop, then points add/subtract from 100, ~2/sec */
-/* the things that pop in the result modal: [emoji, tooltip, point delta]. Point items
-   move the counter; achievement-only items have delta 0. Sum of deltas + 100 = score. */
+/* count-up score tally — the total starts at 0; "Completed!" supplies the base 100,
+   then bonuses add and the mistake penalty subtracts, ~2/sec */
+/* the things that pop in the result modal: [emoji, label, point delta]. Point items
+   move the counter; achievement-only items have delta 0. Sum of deltas = score. */
 function tallyItems(cs){
   const it=[];
-  if(cs.ruleBreaker){ it.push(["💀","Rule Breaker — shared word went last every guess",cs.score-100]); return it; }
+  if(cs.ruleBreaker){ it.push(["💀","Rule Breaker — shared word went last every guess",cs.score]); return it; }
+  it.push(["✅","Completed!",100]);   /* base for a solve — lands first and runs the total up to 100 */
   if(penalty>0) it.push(["💔",mistakes+" mistake"+(mistakes===1?"":"s"),-penalty]);
   if(cs.hubFirst) it.push(["🔝","Hub First",HUB_BONUS]);
   if(cs.hubMiddle) it.push(["↔️","Hub Middle",HUB_MID_BONUS]);
@@ -1046,15 +1054,15 @@ function runModalTally(score){
   if(!c) return;
   if(!G){ renderTallyStatic(score); if(wrap) wrap.style.opacity=""; return; }
   const items=tallyItems(calcScore());
-  c.textContent="100"; ls.innerHTML="";
+  c.textContent="0"; ls.innerHTML="";
   if(wrap) G.set(wrap,{opacity:0});
   G.fromTo(c,{scale:.55,opacity:0},{scale:1,opacity:1,duration:.4,ease:"back.out(2)"});
-  let cur=100;
+  let cur=0;
   function bump(v,big){ const from=cur; const o={v:from}; cur=v;
     G.to(o,{v:v,duration:.45,ease:"power1.out",onUpdate:()=>{c.textContent=Math.round(o.v);}});
     G.fromTo(c,{scale:big?1.5:1.26},{scale:1,duration:big?.7:.45,ease:"elastic.out(1,.5)"});
     G.fromTo(c,{color:(v>=from?"#56b870":"#d05b5b")},{color:"#2b2620",duration:.6,ease:"power2.out"}); }
-  const STEP=0.5; let time=0.45, acc=100;
+  const STEP=0.5; let time=0.45, acc=0;
   const tl=G.timeline({onComplete:()=>{
     G.fromTo(c,{scale:1.16},{scale:1,duration:.7,ease:"elastic.out(1,.4)"});
     if(wrap) G.to(wrap,{opacity:1,duration:.45,delay:.2});
@@ -1106,7 +1114,7 @@ function showResult(won,score,fancy,quiet){
      button without popping the modal open on every refresh. */
   document.getElementById("mbody").innerHTML=
     (won
-      ? "<div class='tally-count' id='tallyCount'>"+(quiet?score:100)+"</div><div class='tally-list' id='tallyList'></div>"
+      ? "<div class='tally-count' id='tallyCount'>"+(quiet?score:0)+"</div><div class='tally-list' id='tallyList'></div>"
       : "<h2>Out of guesses 😵</h2><div class='score'>"+(mistakes?mistakes+" mistake"+(mistakes===1?"":"s"):"No mistakes")+"</div>")+
     "<div id='shareWrap' style='text-align:center;margin:12px 0'><img id='shareImg' alt='' style='width:78%;max-width:300px;border-radius:12px;box-shadow:0 2px 10px rgba(43,38,32,.15)'></div>"+
     "<div class='rowbtns'>"+
