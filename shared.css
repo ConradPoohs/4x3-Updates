@@ -185,7 +185,7 @@
   .srow .v.good{color:#3b8f57;} .srow .v.bad{color:var(--bad);}
   .srow .sd{color:#7a7264; font-size:13px; text-align:right; max-width:56%;}
   .scat .def{cursor:help;}
-  #deftip{position:fixed; z-index:90; max-width:240px; background:var(--ink); color:var(--paper);
+  #deftip{position:fixed; z-index:130; max-width:240px; background:var(--ink); color:var(--paper);
     font-size:12.5px; line-height:1.4; padding:8px 11px; border-radius:9px;
     box-shadow:0 6px 18px rgba(43,38,32,.3); opacity:0; transform:translateY(4px);
     transition:opacity .15s ease, transform .15s ease; pointer-events:none;}
@@ -222,20 +222,11 @@
     .promo-apps a:hover{background:rgba(125,63,196,.12);}
     .promo-apps a:focus-visible{outline:none; box-shadow:0 0 0 2px var(--paper),0 0 0 4px #1f6feb;}
   }
-  /* ---------- score tally (plays before the share card) ---------- */
-  #tally{position:fixed; inset:0; z-index:96; display:none; align-items:center; justify-content:center;
-    background:rgba(43,38,32,.55); padding:24px; text-align:center;}
-  .tally-box{display:flex; flex-direction:column; align-items:center; width:100%; max-width:320px;}
-  .tally-count{font-size:64px; font-weight:800; color:#fff; line-height:1; min-height:64px;
-    text-shadow:0 3px 14px rgba(0,0,0,.35); margin-bottom:16px; visibility:hidden;}
-  .tally-feed{display:flex; flex-direction:column; gap:7px; align-items:center; width:100%;}
-  .tally-row{display:flex; align-items:center; gap:10px; width:100%;
-    background:rgba(255,255,255,.94); border-radius:999px; padding:7px 16px;
-    box-shadow:0 4px 14px rgba(0,0,0,.2);}
-  .tally-row .tr-emoji{font-size:18px; line-height:1;}
-  .tally-row .tr-label{flex:1; text-align:left; font-size:14px; font-weight:700; color:#2b2620;}
-  .tally-row .tr-delta{font-size:15px; font-weight:800;}
-  .tally-row .tr-delta.pos{color:#3b8f57;} .tally-row .tr-delta.neg{color:var(--bad);}
+  /* ---------- score tally (counter + icon badges in the result modal) ---------- */
+  .tally-count{font-size:54px; font-weight:800; text-align:center; color:var(--ink); line-height:1; margin:6px 0 12px;}
+  .tally-icons{display:flex; flex-wrap:wrap; gap:7px; justify-content:center; min-height:1px;}
+  .tally-ico{width:40px; height:40px; display:flex; align-items:center; justify-content:center; font-size:22px;
+    border-radius:10px; border:1.5px solid var(--line); background:#faf7f1; cursor:help; user-select:none;}
   /* ---------- history page ---------- */
   /* big streak hero in the signature four-colour gradient */
   .streak-hero{position:relative; overflow:hidden; border-radius:16px; padding:22px 18px 20px;

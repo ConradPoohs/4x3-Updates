@@ -104,7 +104,6 @@
     <div id="mbody" class="result"></div>
   </div>
 </div>
-<div id="tally"><div class="tally-box"><div class="tally-count" id="tallyCount"></div><div class="tally-feed" id="tallyFeed"></div></div></div>
 <div class="toast" id="toast"></div>
 <div id="deftip"></div>
 
@@ -691,11 +690,11 @@ function hubPop(){
   const inner=t.querySelector(".tin");
   if(G){ G.killTweensOf(inner,"scale"); G.timeline().set(inner,{scale:1}).to(inner,{scale:0.85,duration:.09,ease:"power2.in"}).to(inner,{scale:1,duration:.22,ease:"back.out(2.2)"}); }
   const b=document.getElementById("board");
-  const poll=pollEmoji();   /* while a poll is live it overrides the per-puzzle hub emoji (one per 5-min window) */
-  const cx=t._sx+TW/2, cy=t._sy+TH/2, he=poll||hubEmoji, solo=poll||SOLO_POP[special];
+  /* a bunch of celebratory emojis with one hub-word easter egg mixed in */
+  const cx=t._sx+TW/2, cy=t._sy+TH/2, he=hubEmoji;
   for(let i=0;i<12;i++){
     const e=document.createElement("div");
-    e.textContent=solo?solo:(he&&(i===0||Math.random()<0.3))?he:POP_EMOJI[Math.floor(Math.random()*POP_EMOJI.length)];
+    e.textContent=(he&&i===0)?he:POP_EMOJI[Math.floor(Math.random()*POP_EMOJI.length)];
     e.style.cssText="position:absolute;left:"+(cx-12)+"px;top:"+(cy-12)+"px;font-size:"+(18+Math.random()*14)+"px;pointer-events:none;z-index:30;will-change:transform;";
     b.appendChild(e);
     if(G){
@@ -967,7 +966,7 @@ function winSequence(won,score){
   tl.to(others,{opacity:.3,duration:1,ease:"power1.inOut"},1.0);   /* dim once the flips have been seen */
   tl.add(()=>{explodeHub(t); shakeScreen();},2.0);                 /* pop at the top of the zoom */
   tl.to(t,{opacity:0,scale:2.6,duration:.2,ease:"power3.in"},2.0);
-  tl.add(()=>runTally(()=>showResult(won,score,true)),2.0);        /* tally counts up, then the share card */
+  tl.add(()=>showResult(won,score,true),2.0);                      /* result modal: counter tallies up, then the share card */
   tl.to(others,{opacity:1,duration:.7,ease:"power1.inOut"},2.8);
   tl.to(t,{opacity:1,scale:1,duration:.8,ease:"back.out(1.5)"},3.0);
   tl.add(endFlourish,4.0);
@@ -986,60 +985,67 @@ function confettiBurst(x,y){
   }
 }
 /* count-up score tally — achievements pop, then points add/subtract from 100, ~2/sec */
-function runTally(onDone){
-  const ov=document.getElementById("tally"), feed=document.getElementById("tallyFeed"), countEl=document.getElementById("tallyCount");
-  const cs=calcScore();
-  if(!G||!ov){ if(onDone) onDone(); return; }
-  feed.innerHTML=""; countEl.textContent=""; countEl.style.visibility="hidden";
-  ov.style.display="flex"; G.fromTo(ov,{opacity:0},{opacity:1,duration:.25});
-  /* phase 1: no-point achievement badges */
-  const badges=[];
-  if(cs.dayBefore) badges.push(["🌙","The Day Before"]);
-  if(cs.rainbow) badges.push(["🌈","Rainbow"]);
-  if(cs.grellow) badges.push(["🎾","Grellow"]);
-  if(cs.grue) badges.push(["🦚","Grue"]);
-  if(cs.godDamnit) badges.push(["😤","God Damnit!"]);
-  if(cs.goldPlaque) badges.push(["🥇","Gold Plaque"]); else if(cs.silverPlaque) badges.push(["🥈","Silver Plaque"]);
-  /* phase 2: point steps from 100 */
-  let steps;
-  if(cs.ruleBreaker) steps=[["🎉","Success!",100],["💀","RULE BREAKER",cs.score-100]];
-  else{
-    steps=[["🎉","Success!",100]];
-    if(penalty>0) steps.push(["💔","Mistakes",-penalty]);
-    if(cs.hubFirst) steps.push(["🔝","Hub First",HUB_BONUS]);
-    if(cs.hubMiddle) steps.push(["↔️","Hub Middle",HUB_MID_BONUS]);
-    if(cs.blueFirst) steps.push(["🔵","Blue First",BLUE_BONUS]);
-    if(cs.purpleFirst) steps.push(["🟣","Purple First",PURPLE_BONUS]);
-    if(cs.revRainbow) steps.push(["🌈","Reverse Rainbow",RAINBOW_BONUS]);
-    if(cs.fast) steps.push(["⚡","Sub-90s",SPEED_BONUS]);
-    if(cs.perfectBonus) steps.push(["💯","Perfect Game",cs.perfectBonus]);
-    if(cs.streak>0) steps.push(["🔥",cs.streak+"-day streak",cs.streak]);
-    if(cs.adBonus) steps.push(["📣","Ad click",cs.adBonus]);
-  }
-  let cur=0;
-  function popRow(emoji,label,deltaText,cls){
-    const row=document.createElement("div"); row.className="tally-row";
-    row.innerHTML="<span class='tr-emoji'>"+emoji+"</span><span class='tr-label'>"+esc(label)+"</span>"+(deltaText?"<span class='tr-delta "+(cls||"")+"'>"+deltaText+"</span>":"");
-    feed.appendChild(row);
-    G.fromTo(row,{opacity:0,scale:.6,y:8},{opacity:1,scale:1,y:0,duration:.28,ease:"back.out(2)"});
-    const r=row.getBoundingClientRect(); confettiBurst(r.left+r.width/2, r.top+r.height/2);
-  }
-  function bumpTo(v){
-    countEl.style.visibility=""; const o={v:cur}; cur=v;
-    G.to(o,{v:v,duration:.32,ease:"power1.out",onUpdate:()=>{countEl.textContent=Math.round(o.v);}});
-    G.fromTo(countEl,{scale:1.22},{scale:1,duration:.3,ease:"power2.out"});                  /* shudder */
-    G.fromTo(countEl,{x:(Math.random()<.5?-3:3)},{x:0,duration:.32,ease:"elastic.out(1,.45)"});
-  }
-  const STEP=0.45;
-  let time=0.3, acc=0;
-  const tl=G.timeline({onComplete:()=>{ G.to(ov,{opacity:0,duration:.4,delay:.9,onComplete:()=>{ ov.style.display="none"; ov.style.opacity=""; if(onDone) onDone(); }}); }});
-  badges.forEach(b=>{ const e=b[0],l=b[1]; tl.add(()=>popRow(e,l,""), time); time+=STEP; });
-  steps.forEach(s=>{
-    acc+=s[2]; const target=acc, noChip=(s[1]==="Success!"||s[1]==="RULE BREAKER");
-    const dtext=noChip?"":((s[2]>=0?"+":"−")+Math.abs(s[2])), cls=s[2]<0?"neg":"pos";
-    ((em,lab,dt,c,tgt)=>{ tl.add(()=>{ popRow(em,lab,dt,c); bumpTo(tgt); }, time); })(s[0],s[1],dtext,cls,target);
+/* the things that pop in the result modal: [emoji, tooltip, point delta]. Point items
+   move the counter; achievement-only items have delta 0. Sum of deltas + 100 = score. */
+function tallyItems(cs){
+  const it=[];
+  if(cs.ruleBreaker){ it.push(["💀","Rule Breaker — the shared word went last every guess",cs.score-100]); return it; }
+  if(penalty>0) it.push(["💔",(mistakes+" mistake"+(mistakes===1?"":"s"))+" −"+penalty,-penalty]);
+  if(cs.hubFirst) it.push(["🔝","Hub First +"+HUB_BONUS,HUB_BONUS]);
+  if(cs.hubMiddle) it.push(["↔️","Hub Middle +"+HUB_MID_BONUS,HUB_MID_BONUS]);
+  if(cs.blueFirst) it.push(["🔵","Blue First +"+BLUE_BONUS,BLUE_BONUS]);
+  if(cs.purpleFirst) it.push(["🟣","Purple First +"+PURPLE_BONUS,PURPLE_BONUS]);
+  if(cs.revRainbow) it.push(["🌈","Reverse Rainbow +"+RAINBOW_BONUS,RAINBOW_BONUS]);
+  if(cs.fast) it.push(["⚡","Sub-90s +"+SPEED_BONUS,SPEED_BONUS]);
+  if(cs.perfectBonus) it.push(["💯","Perfect Game +"+cs.perfectBonus,cs.perfectBonus]);
+  if(cs.streak>0) it.push(["🔥",cs.streak+"-day streak +"+cs.streak,cs.streak]);
+  if(cs.adBonus) it.push(["📣","Ad click +"+cs.adBonus,cs.adBonus]);
+  if(cs.perfect&&!cs.allRewards&&!cs.godDamnit) it.push(["✨","Perfect — no mistakes",0]);
+  if(cs.rainbow) it.push(["🏳️‍🌈","Rainbow — yellow → green → blue → purple",0]);
+  if(cs.grellow) it.push(["🎾","Grellow — purple → blue → yellow → green",0]);
+  if(cs.grue) it.push(["🦚","Grue — purple → green → blue → yellow",0]);
+  if(cs.godDamnit) it.push(["😤","God Damnit! — perfect but for one swap",0]);
+  if(cs.dayBefore) it.push(["🌙","The Day Before — played 12–1am",0]);
+  if(cs.goldPlaque) it.push(["🥇","Gold Plaque — perfect, under 90s",0]);
+  else if(cs.silverPlaque) it.push(["🥈","Silver Plaque — perfect, under 120s",0]);
+  return it;
+}
+function icoHTML(it){ return "<div class='tally-ico' data-def=\""+esc(it[1])+"\">"+it[0]+"</div>"; }
+/* static (no animation) — used when re-opening a finished game */
+function renderTallyStatic(score){
+  const c=document.getElementById("tallyCount"), ic=document.getElementById("tallyIcons");
+  if(!c) return;
+  c.textContent=score;
+  ic.innerHTML=tallyItems(calcScore()).map(icoHTML).join("");
+}
+/* animated — counter pops at 100 then counts up/down as each icon appears, share fades in after */
+function runModalTally(score){
+  const c=document.getElementById("tallyCount"), ic=document.getElementById("tallyIcons"), wrap=document.getElementById("shareWrap");
+  if(!c) return;
+  if(!G){ renderTallyStatic(score); if(wrap) wrap.style.opacity=""; return; }
+  const items=tallyItems(calcScore());
+  c.textContent="100"; ic.innerHTML="";
+  if(wrap) G.set(wrap,{opacity:0});
+  G.fromTo(c,{scale:.6,opacity:0},{scale:1,opacity:1,duration:.3,ease:"back.out(2)"});
+  let cur=100;
+  function bump(v){ const o={v:cur}; cur=v;
+    G.to(o,{v:v,duration:.3,ease:"power1.out",onUpdate:()=>{c.textContent=Math.round(o.v);}});
+    G.fromTo(c,{scale:1.2},{scale:1,duration:.28,ease:"power2.out"});
+    G.fromTo(c,{x:(Math.random()<.5?-3:3)},{x:0,duration:.3,ease:"elastic.out(1,.45)"}); }
+  const STEP=0.42; let time=0.3, acc=100;
+  const tl=G.timeline({onComplete:()=>{ if(wrap) G.to(wrap,{opacity:1,duration:.4,delay:.25}); }});
+  items.forEach(it=>{
+    acc+=it[2]; const target=acc;
+    ((item,tgt)=>{ tl.add(()=>{
+      const box=document.createElement("div"); box.className="tally-ico"; box.textContent=item[0]; box.setAttribute("data-def",item[1]);
+      ic.appendChild(box);
+      G.fromTo(box,{opacity:0,scale:.5},{opacity:1,scale:1,duration:.26,ease:"back.out(2.2)"});
+      const r=box.getBoundingClientRect(); confettiBurst(r.left+r.width/2,r.top+r.height/2);
+      if(item[2]!==0) bump(tgt);
+    }, time); })(it,target);
     time+=STEP;
   });
+  if(!items.length) confettiBurst(innerWidth/2, innerHeight/2);   /* plain win: a little celebration anyway */
 }
 function shakeScreen(){
   if(!G) return;
@@ -1072,27 +1078,10 @@ function showResult(won,score,fancy,quiet){
      quiet=true (used on a restored/finished game) builds the result + inline
      button without popping the modal open on every refresh. */
   document.getElementById("mbody").innerHTML=
-    "<h2>"+(calcScore().ruleBreaker?"Rule Breaker 💀":calcScore().godDamnit?"God Damnit! 😤":won?(mistakes===0?"Perfect! 🌟":"Solved!"):"Out of guesses 😵")+"</h2>"+
-    "<div class='score'>"+(calcScore().ruleBreaker
-      ?"<b style='color:#7a2e22'>"+score+" pts</b><br><span style='font-size:22px;font-weight:800;letter-spacing:1px;color:#7a2e22'>RULE BREAKER</span><br><span style='display:inline-block;margin-top:5px;font-size:13px;font-weight:400;color:#7a7264;line-height:1.4'>You put the shared word last in every guess. That's not what we wanted you to do.</span>"
-      :(won?"<b>"+score+" pts</b>":"")+
-      (calcScore().allRewards
-        ?"<br><span style='font-size:24px;font-weight:800;background:"+(calcScore().silverPlaque?"linear-gradient(120deg,#e8ebf1,#99a1af)":"linear-gradient(120deg,#e3c878,#bf941f)")+";-webkit-background-clip:text;background-clip:text;color:transparent'>"+(calcScore().goldPlaque?"Gold Plaque Unlocked!":calcScore().silverPlaque?"Silver Plaque Unlocked!":"Perfect Game")+"</span>"+((calcScore().goldPlaque||calcScore().silverPlaque)?"<br><span style='display:inline-block;margin-top:5px;font-size:13px;font-weight:400;color:#7a7264;line-height:1.4'>You got a perfect board in less than "+(calcScore().goldPlaque?"90 seconds! The game's current top achievement.":"120 seconds!")+"</span>":"")
-        :(calcScore().godDamnit?"<br><span style='font-size:21px;font-weight:800;color:#b83b2c'>God Damnit! Plaque</span><br><span style='display:inline-block;margin:4px 0 2px;font-size:13px;font-weight:400;color:#7a7264;line-height:1.4'>Nearly flawless. Which, honestly, makes it worse.</span><br>":"")
-         +(won?" · ":"")+(mistakes?mistakes+" mistake"+(mistakes===1?"":"s"):"No mistakes")
-         +(calcScore().hubFirst?"<br><span style='color:#b8860b;font-weight:700'>Hub First +"+HUB_BONUS+"</span>":"")
-         +(calcScore().hubMiddle?"<br><span style='color:#b8860b;font-weight:700'>Hub Middle +"+HUB_MID_BONUS+"</span>":"")
-         +(calcScore().purpleFirst?"<br><span style='color:#a06ee1;font-weight:700'>Purple First +"+PURPLE_BONUS+"</span>":"")
-         +(calcScore().blueFirst?"<br><span style='color:#5b8def;font-weight:700'>Blue First +"+BLUE_BONUS+"</span>":"")
-         +(calcScore().revRainbow?"<br><span style='color:#a06ee1;font-weight:700'>Reverse Rainbow +"+RAINBOW_BONUS+"</span>":"")
-         +(calcScore().rainbow?"<br><span style='font-weight:800;background:linear-gradient(90deg,#e7b416,#56b870,#5b8def,#a06ee1);-webkit-background-clip:text;background-clip:text;color:transparent'>Rainbow! 🌈</span>":"")
-         +(calcScore().grellow?"<br><span style='color:#56b870;font-weight:700'>Grellow! 🎾</span>":"")
-         +(calcScore().grue?"<br><span style='color:#3f9b9b;font-weight:700'>Grue! 🦚</span>":"")
-         +(calcScore().fast?"<br><span style='color:#0f8f86;font-weight:700'>Sub-90s bonus! +"+SPEED_BONUS+"</span> 💎":"")
-         +(calcScore().streak>0?"<br><span style='color:#7d3fc4;font-weight:700'>"+calcScore().streak+"-day streak +"+calcScore().streak+"</span>":"")
-         +(calcScore().adBonus?"<br><span style='color:#b5603e;font-weight:700'>Thanks for clicking! +"+AD_BONUS+"</span>":"")
-         +(calcScore().dayBefore?"<br><span style='color:#5b6cb0;font-weight:800'>The Day Before 🌙</span>":"")))+"</div>"+
-    "<div style='text-align:center;margin:12px 0'><img id='shareImg' alt='' style='width:78%;max-width:300px;border-radius:12px;box-shadow:0 2px 10px rgba(43,38,32,.15)'></div>"+
+    (won
+      ? "<div class='tally-count' id='tallyCount'>"+(quiet?score:100)+"</div><div class='tally-icons' id='tallyIcons'></div>"
+      : "<h2>Out of guesses 😵</h2><div class='score'>"+(mistakes?mistakes+" mistake"+(mistakes===1?"":"s"):"No mistakes")+"</div>")+
+    "<div id='shareWrap' style='text-align:center;margin:12px 0'><img id='shareImg' alt='' style='width:78%;max-width:300px;border-radius:12px;box-shadow:0 2px 10px rgba(43,38,32,.15)'></div>"+
     "<div class='rowbtns'>"+
       "<button class='hbtn primary' onclick='shareImage(this)'>"+(IS_MOBILE?"Share image":"Copy image")+"</button>"+
       "<button class='hbtn' onclick='downloadImage(this)'>Download</button>"+
@@ -1110,6 +1099,7 @@ function showResult(won,score,fancy,quiet){
   r.innerHTML="<div class='ctrls' style='margin-top:10px'><button class='hbtn' onclick='openModal()'>Results</button></div>";
   if(isBeta){ document.getElementById("fbCard").style.display=""; initFb(); }
   if(!quiet) openModal(fancy);
+  if(won){ if(quiet) renderTallyStatic(score); else runModalTally(score); }
 }
 function openModal(fancy){
   const m=document.getElementById("modal");
@@ -1682,6 +1672,23 @@ function toast(msg,ms){
   sl.addEventListener("click",e=>{ const t=e.target.closest(".def"); if(t){ show(t); e.stopPropagation(); } });
   document.addEventListener("click",e=>{ if(!e.target.closest(".def")) hide(); });
   window.addEventListener("scroll",hide,true);
+})();
+
+/* hover/tap the result-modal score icons for their tooltips (reuse #deftip) */
+(function(){
+  const mb=document.getElementById("mbody"), tip=document.getElementById("deftip");
+  if(!mb||!tip) return;
+  function show(el){
+    tip.textContent=el.dataset.def||""; tip.classList.add("show");
+    const r=el.getBoundingClientRect(), tw=tip.offsetWidth, th=tip.offsetHeight;
+    const left=Math.max(8,Math.min(r.left+r.width/2-tw/2, innerWidth-tw-8));
+    let top=r.top-th-8; if(top<6) top=r.bottom+8;
+    tip.style.left=left+"px"; tip.style.top=top+"px";
+  }
+  function hide(){ tip.classList.remove("show"); }
+  mb.addEventListener("mouseover",e=>{ const t=e.target.closest(".tally-ico"); if(t) show(t); });
+  mb.addEventListener("mouseout",e=>{ const t=e.target.closest(".tally-ico"); if(t) hide(); });
+  mb.addEventListener("click",e=>{ const t=e.target.closest(".tally-ico"); if(t){ show(t); e.stopPropagation(); } else hide(); });
 })();
 
 /* +5 for tapping the ad (banner or sidebar) */
