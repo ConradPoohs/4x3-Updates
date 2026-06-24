@@ -1602,7 +1602,7 @@ function recordHistory(){
     h[dailyKey]={s:cs.score, m:mistakes, w:cs.won?1:0, ms:solveMs,
       hf:cs.hubFirst?1:0, hm:cs.hubMiddle?1:0, pf:cs.purpleFirst?1:0, bf:cs.blueFirst?1:0,
       rr:cs.revRainbow?1:0, rw:cs.rainbow?1:0, gr:cs.grellow?1:0, gu:cs.grue?1:0, gd:cs.godDamnit?1:0, db:cs.dayBefore?1:0,
-      fast:cs.fast?1:0, rb:cs.ruleBreaker?1:0, p:cs.perfect?1:0,
+      fast:cs.fast?1:0, rb:cs.ruleBreaker?1:0, p:cs.perfect?1:0, ad:adClicked?1:0,
       gold:cs.goldPlaque?1:0, silver:cs.silverPlaque?1:0,
       rel:rel,   /* counts toward the streak; preserved across archive replays */
       ts:Date.now()};
@@ -1613,7 +1613,7 @@ function recordHistory(){
     if(window.x43beacon){
       const cs2=calcScore();
       x43beacon({p:dailyKey, rel:(dailyKey===todayStr())?1:0, w:cs2.won?1:0,
-        m:mistakes, s:cs2.score, ms:solveMs, st:streakWithToday()});
+        m:mistakes, s:cs2.score, ms:solveMs, st:streakWithToday(), ad:adClicked?1:0});
     }
   }catch(e){}
   /* also stash the rendered share card PNG (separate, capped key so images can't
