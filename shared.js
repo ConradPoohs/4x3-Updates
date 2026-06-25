@@ -85,8 +85,9 @@ function buildA11yMenu(){
   const menu=document.createElement("div");
   menu.id="a11yMenu"; menu.hidden=true; menu.setAttribute("role","group"); menu.setAttribute("aria-label","Accessibility options");
   const opt=(k,label)=>"<label class='a11y-opt'><input type='checkbox' data-k='"+k+"'"+(A11Y[k]?" checked":"")+"><span>"+label+"</span></label>";
-  menu.innerHTML="<div class='a11y-h'>Accessibility</div>"+opt("rm","Reduced motion")+opt("hc","High contrast")+opt("cb","Colorblind colors")+opt("bt","Bigger text");
-  document.body.appendChild(btn); document.body.appendChild(menu);
+  menu.innerHTML=opt("rm","Reduced motion")+opt("hc","High contrast")+opt("cb","Colorblind colors")+opt("bt","Bigger text");
+  const host=document.querySelector(".wrap")||document.body;   /* inside the column so it mirrors the streak */
+  host.appendChild(btn); host.appendChild(menu);
   function setOpen(o){ menu.hidden=!o; btn.setAttribute("aria-expanded",String(o)); }
   btn.addEventListener("click",e=>{ e.stopPropagation(); setOpen(menu.hidden); });
   menu.addEventListener("click",e=>e.stopPropagation());
