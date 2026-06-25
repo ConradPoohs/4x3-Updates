@@ -316,6 +316,10 @@
     letter-spacing:.3px; text-transform:lowercase; opacity:.9; pointer-events:none;}
   .a11y-lc .tlabel{display:block;}
 
+  /* ---------- a11y: one card color — pre-flip cards drift through faint versions of the
+     four hues; this locks every unsolved card to one static light blue-green ---------- */
+  .a11y-oc .tin.idle{animation:none !important; background-color:#f6fcf9 !important;}
+
   /* ---------- a11y: high contrast (darker text, stronger borders) ---------- */
   .a11y-hc{--line:#8a8174;}
   .a11y-hc body{color:#15120d;}

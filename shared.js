@@ -7,7 +7,8 @@ let A11Y={}; try{ A11Y=JSON.parse(localStorage.getItem("x43_a11y"))||{}; }catch(
 function reduceMotion(){ return !!A11Y.rm; }   /* checked at animation time in index.html */
 /* apply the html classes as early as possible (documentElement exists in <head>) */
 (function(){ const c=document.documentElement.classList;
-  c.toggle("a11y-rm",!!A11Y.rm); c.toggle("a11y-hc",!!A11Y.hc); c.toggle("a11y-bt",!!A11Y.bt); c.toggle("a11y-lc",!!A11Y.lc); })();
+  c.toggle("a11y-rm",!!A11Y.rm); c.toggle("a11y-hc",!!A11Y.hc); c.toggle("a11y-bt",!!A11Y.bt);
+  c.toggle("a11y-lc",!!A11Y.lc); c.toggle("a11y-oc",!!A11Y.oc); })();
 
 /* category palette: 0 blue, 1 green, 2 yellow, 3 purple. "Labeled colors" mode keeps
    these and just adds the colour's name to each solved tile (no recolouring). */
@@ -84,7 +85,7 @@ function buildA11yMenu(){
   const menu=document.createElement("div");
   menu.id="a11yMenu"; menu.hidden=true; menu.setAttribute("role","group"); menu.setAttribute("aria-label","Accessibility options");
   const opt=(k,label)=>"<label class='a11y-opt'><input type='checkbox' data-k='"+k+"'"+(A11Y[k]?" checked":"")+"><span>"+label+"</span></label>";
-  menu.innerHTML=opt("rm","Reduced motion")+opt("hc","High contrast")+opt("lc","Labeled colors")+opt("bt","Bigger text");
+  menu.innerHTML=opt("rm","Reduced motion")+opt("hc","High contrast")+opt("lc","Labeled colors")+opt("oc","One card color")+opt("bt","Bigger text");
   const host=document.querySelector(".wrap")||document.body;   /* inside the column so it mirrors the streak */
   host.appendChild(btn); host.appendChild(menu);
   function setOpen(o){
