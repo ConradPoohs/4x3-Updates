@@ -377,6 +377,9 @@ function buildTiles(){
     inner.className="tin";
     inner.style.animationDelay=(-Math.random()*16).toFixed(2)+"s"; /* desync the color drift */
     inner.appendChild(document.createTextNode(w));
+    const lbl=document.createElement("span");   /* colour name shown only in "Labeled colors" mode */
+    lbl.className="tlabel";
+    inner.appendChild(lbl);
     const back=document.createElement("div");
     back.className="tback";
     flip.appendChild(inner);
@@ -580,6 +583,8 @@ function paintTiles(){
     if(inert) t.setAttribute("aria-disabled","true"); else t.removeAttribute("aria-disabled");
     const hubPlaced=(w===special&&(solvedIdx.length>=2||over)); /* hub sits in the center now */
     const ci=colorCat[w];
+    const lbl=inner.querySelector(".tlabel");   /* colour name (shown only in Labeled colors mode) */
+    if(lbl) lbl.textContent=(ci!==undefined&&!hubPlaced)?COLOR_NAMES[ci]:"";
     /* card back: a solved tile shows its category-coloured fish; otherwise the default light back */
     const back=t.querySelector(".tback");
     if(back) back.style.backgroundImage=(ci!==undefined&&!hubPlaced)?("url('"+BACKS[ci]+"')"):"";
