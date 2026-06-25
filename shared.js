@@ -2,9 +2,21 @@
 /* Shared by index.html (the game) and the scoring / archive / build pages.
    One source of truth for the puzzle encoding, palette, dates, and point values. */
 
-/* category palette: 0 blue, 1 green, 2 yellow, 3 purple */
-const COLORS=["#5b8def","#56b870","#e7b416","#a06ee1"];
-const TINTS=["#e8effc","#e6f4ea","#fcf3d7","#f1e8fa"];
+/* ---------- accessibility settings (shared across all pages) ---------- */
+let A11Y={}; try{ A11Y=JSON.parse(localStorage.getItem("x43_a11y"))||{}; }catch(e){}
+function reduceMotion(){ return !!A11Y.rm; }   /* checked at animation time in index.html */
+/* apply the html classes as early as possible (documentElement exists in <head>) */
+(function(){ const c=document.documentElement.classList;
+  c.toggle("a11y-rm",!!A11Y.rm); c.toggle("a11y-hc",!!A11Y.hc); c.toggle("a11y-bt",!!A11Y.bt); c.toggle("a11y-cb",!!A11Y.cb); })();
+
+/* category palette (0 blue, 1 green, 2 yellow, 3 purple) — colorblind mode swaps it.
+   COLORS/TINTS/MIDC are `let` so the colorblind palette can replace them at load. */
+const PAL={
+  normal:{colors:["#5b8def","#56b870","#e7b416","#a06ee1"], tints:["#e8effc","#e6f4ea","#fcf3d7","#f1e8fa"], mid:["#b1c9f7","#b3dcc0","#f3da8e","#d2b9f0"]},
+  cb:    {colors:["#0072b2","#009e73","#e69f00","#cc79a7"], tints:["#dcebf6","#d8f0e7","#fbeed2","#f6e6f1"], mid:["#8fc0e0","#7fd3bb","#f0cd86","#e3b3d2"]}
+};
+let COLORS, TINTS, MIDC;
+(function(){ const p=A11Y.cb?PAL.cb:PAL.normal; COLORS=p.colors; TINTS=p.tints; MIDC=p.mid; })();
 
 /* scoring point values — change them here and every page follows */
 const MISS=15, MISS_LATE=30;
@@ -63,3 +75,29 @@ function fallbackCopy(text,done){
   const ta=document.createElement("textarea"); ta.value=text; document.body.appendChild(ta);
   ta.select(); try{document.execCommand("copy");}catch(e){} document.body.removeChild(ta); done();
 }
+
+/* ---------- accessibility menu (top-right ♿, on every page) ---------- */
+function buildA11yMenu(){
+  if(document.getElementById("a11yBtn")) return;
+  const btn=document.createElement("button");
+  btn.id="a11yBtn"; btn.type="button"; btn.textContent="Settings";
+  btn.setAttribute("aria-label","Accessibility options"); btn.setAttribute("aria-haspopup","true"); btn.setAttribute("aria-expanded","false");
+  const menu=document.createElement("div");
+  menu.id="a11yMenu"; menu.hidden=true; menu.setAttribute("role","group"); menu.setAttribute("aria-label","Accessibility options");
+  const opt=(k,label)=>"<label class='a11y-opt'><input type='checkbox' data-k='"+k+"'"+(A11Y[k]?" checked":"")+"><span>"+label+"</span></label>";
+  menu.innerHTML="<div class='a11y-h'>Accessibility</div>"+opt("rm","Reduced motion")+opt("hc","High contrast")+opt("cb","Colorblind colors")+opt("bt","Bigger text");
+  document.body.appendChild(btn); document.body.appendChild(menu);
+  function setOpen(o){ menu.hidden=!o; btn.setAttribute("aria-expanded",String(o)); }
+  btn.addEventListener("click",e=>{ e.stopPropagation(); setOpen(menu.hidden); });
+  menu.addEventListener("click",e=>e.stopPropagation());
+  menu.addEventListener("change",e=>{
+    const k=e.target.dataset&&e.target.dataset.k; if(!k) return;
+    A11Y[k]=e.target.checked?1:0;
+    try{ localStorage.setItem("x43_a11y",JSON.stringify(A11Y)); }catch(_){}
+    document.documentElement.classList.toggle("a11y-"+k,!!A11Y[k]);
+    if(k==="cb") location.reload();   /* palette is chosen at load, so re-render cleanly */
+  });
+  document.addEventListener("click",()=>setOpen(false));
+  document.addEventListener("keydown",e=>{ if(e.key==="Escape") setOpen(false); });
+}
+if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",buildA11yMenu); else buildA11yMenu();

@@ -8,10 +8,10 @@
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
   .wrap{max-width:560px; margin:0 auto; padding:20px 16px 60px; position:relative;}
   /* subtle current-streak note tucked into the top-right, next to the logo */
-  .streak-tag{position:absolute; top:16px; right:16px; z-index:5;
-    font-size:12px; font-weight:600; letter-spacing:.3px; color:#c4bcae;
+  .streak-tag{position:absolute; top:18px; right:16px; z-index:5;   /* mirrors the Settings link on the left */
+    font-size:12px; font-weight:600; letter-spacing:.3px; color:#9a9080;
     text-decoration:none; line-height:1.2; text-align:right;}
-  .streak-tag:hover{color:#9a9080;}
+  .streak-tag:hover{color:#6f6757;}
   .streak-tag:focus-visible{outline:none; border-radius:4px; box-shadow:0 0 0 2px var(--paper),0 0 0 4px #1f6feb;}
   header{text-align:center; margin-bottom:14px;}
   h1{font-size:42px; margin:0; letter-spacing:2px;}
@@ -44,7 +44,9 @@
   /* board */
   #boardWrap{margin-top:4px;}
   #board{position:relative; width:100%;}
-  .tile{position:absolute; top:0; left:0; will-change:transform;}
+  .tile{position:absolute; top:0; left:0; will-change:transform;
+    appearance:none; -webkit-appearance:none; background:none; border:0; margin:0; padding:0;
+    font:inherit; color:inherit; text-align:inherit; display:block;}   /* reset native <button> chrome */
   /* 3D card: a front face (.tin) and a slightly darker back (.tback) */
   .tflip{position:absolute; inset:0; transform-style:preserve-3d; -webkit-transform-style:preserve-3d;}
   .tin{
@@ -288,3 +290,44 @@
   .hbadge.gold{background:linear-gradient(120deg,#f7e7a8,#d8b24a); color:#5a4406; border-color:#caa53a;}
   .hbadge.silver{background:linear-gradient(120deg,#eef1f5,#c2c9d4); color:#4a505c; border-color:#b8bfca;}
   .hbadge.rule{background:#f3dada; color:#7a2e22; border-color:#e0b3b3;}
+
+  /* ---------- accessibility menu ---------- */
+  /* subtle "Settings" link, upper-left — mirrors the streak tag on the right */
+  #a11yBtn{position:fixed; top:18px; left:16px; z-index:140; border:0; background:none; padding:2px;
+    font-size:12px; font-weight:600; letter-spacing:.3px; line-height:1.2; color:#9a9080; cursor:pointer;}
+  #a11yBtn:hover{color:#6f6757;}
+  #a11yBtn:focus-visible{outline:none; border-radius:4px; box-shadow:0 0 0 2px var(--paper),0 0 0 4px #1f6feb;}
+  #a11yMenu{position:fixed; top:44px; left:12px; z-index:140; background:var(--card); border:1.5px solid var(--line);
+    border-radius:12px; padding:10px; box-shadow:0 8px 26px rgba(43,38,32,.22); min-width:196px;}
+  #a11yMenu[hidden]{display:none;}
+  #a11yMenu .a11y-h{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:#7a7264; margin:2px 4px 8px;}
+  .a11y-opt{display:flex; align-items:center; gap:9px; padding:7px 6px; border-radius:8px; font-size:14px; cursor:pointer;}
+  .a11y-opt:hover{background:#f1ece2;}
+  .a11y-opt input{width:18px; height:18px; flex:none; cursor:pointer;}
+  .a11y-opt:focus-within{box-shadow:0 0 0 2px var(--paper),0 0 0 4px #1f6feb;}
+
+  /* ---------- a11y: reduced motion (kills CSS animation/transition; JS gates GSAP) ---------- */
+  .a11y-rm *, .a11y-rm *::before, .a11y-rm *::after{
+    animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important;}
+
+  /* ---------- a11y: colorblind palette (swaps the CSS vars; JS swaps COLORS/TINTS/MIDC) ---------- */
+  .a11y-cb{--c0:#0072b2; --c1:#009e73; --c2:#e69f00; --c3:#cc79a7;}
+
+  /* ---------- a11y: high contrast (darker text, stronger borders) ---------- */
+  .a11y-hc{--line:#8a8174;}
+  .a11y-hc body{color:#15120d;}
+  .a11y-hc .tag, .a11y-hc .hint, .a11y-hc footer, .a11y-hc .pauthor, .a11y-hc .scat span,
+  .a11y-hc .srow .sd, .a11y-hc .streak-tag, .a11y-hc .stat span, .a11y-hc .cell .auth{color:#3a3128 !important;}
+  .a11y-hc footer a{color:#15120d;}
+  .a11y-hc .tin{border-width:2px; border-color:#6a6253;}
+  .a11y-hc .card, .a11y-hc .histrow, .a11y-hc .archlist button, .a11y-hc .tally-row{border-color:#7a7264;}
+
+  /* ---------- a11y: bigger text ---------- */
+  .a11y-bt .tin{font-size:clamp(13px,4.2vw,18px);}
+  .a11y-bt .tag, .a11y-bt .hint, .a11y-bt .pauthor{font-size:15px;}
+  .a11y-bt .scat span{font-size:15px;} .a11y-bt .scat b{font-size:12.5px;}
+  .a11y-bt .hbtn, .a11y-bt .ctrls button, .a11y-bt nav button, .a11y-bt .modes button{font-size:16px;}
+  .a11y-bt .srow, .a11y-bt #mbody, .a11y-bt .result, .a11y-bt .tr-label{font-size:16px;}
+  .a11y-bt .tally-count{font-size:62px;}
+  .a11y-bt .hh-date, .a11y-bt .hh-score, .a11y-bt footer{font-size:15px;}
+  .a11y-bt .f input, .a11y-bt .f label{font-size:16px;}
