@@ -420,7 +420,7 @@ function layout(instant){
     if(G&&!instant&&moved){
       /* staggered glide with a little lift-and-settle */
       const d=(moveIdx++)*0.055;
-      G.to(t,{x:p.x,y:p.y,duration:.85,delay:d,ease:"power3.inOut",overwrite:true}); /* kill any in-flight move so rapid shuffles can't fight each other */
+      G.to(t,{x:p.x,y:p.y,rotation:0,duration:.85,delay:d,ease:"power3.inOut",overwrite:true}); /* rotation:0 clears any leftover tilt from an interrupted intro */
       const inn=t.querySelector(".tin");
       G.timeline({delay:d})
         .to(inn,{scale:1.06,duration:.32,ease:"power2.out"})
@@ -433,7 +433,7 @@ function layout(instant){
         G.to(flip,{rotationY:"+="+(Math.random()<.5?360:-360),duration:.85,delay:d,ease:"power2.inOut",
           onComplete:()=>{ t.style.zIndex=prevZ; }});
       }
-    } else if(G){ G.killTweensOf(t); G.set(t,{x:p.x,y:p.y}); }
+    } else if(G){ G.killTweensOf(t); G.set(t,{x:p.x,y:p.y,rotation:0}); }   /* snap clean: x, y AND rotation */
     else t.style.transform="translate("+p.x+"px,"+p.y+"px)";
   });
   syncDomOrder();
@@ -471,7 +471,7 @@ function syncDomOrder(){
   if(same) return;            /* already ordered — re-appending would cancel in-flight fades */
   for(const t of want) b.appendChild(t);
 }
-window.addEventListener("resize",()=>layout(true));
+window.addEventListener("resize",()=>{ introPlaying=false; layout(true); });  /* a resize ends any in-progress intro cleanly */
 
 /* First solve: trio snaps to its category's colored line (hub on a stable 1-of-3
    cell, center only ~1/3 of the time). From the second solve on: hub → center,
@@ -686,7 +686,7 @@ const DEFS={
   WALLET:{
     "Found in a Pocket":{KEYS:"Your keys — you pat your pocket to find them.",PHONE:"Once wired to a wall, now a pocket computer.",WALLET:"A wallet rides in your pocket (or bag)."},
     "Made of Leather":{BOOT:"Classic boots are made of leather.",BELT:"The classic belt is a strip of leather.",WALLET:"The classic wallet is folded leather."},
-    "Pre-Installed on iPhone":{SAFARI:"Apple's built-in web browser.",PHOTOS:"The stock iPhone photo library.",WALLET:"Apple's app for cards, passes, and payments."},
+    "Pre-Installed on iPhone":{SAFARI:"Apple's built-in web browser.",FACETIME:"Apple's built-in video-calling app.",WALLET:"Apple's app for cards, passes, and payments."},
     "Foldable Item":{FAN:"A folding hand fan opens with a flick.",MAP:"A paper road map folds down small.",WALLET:"A billfold wallet folds in half."}
   }
 };
