@@ -614,6 +614,7 @@ function sharedSet(){
 }
 function sharedCount(){ const s=sharedSet(); return selection.filter(w=>s.has(w)).length; }
 function updateButtons(){
+  if(over) return;   /* after the game the Submit button has become the Results button — leave it */
   let ok=selection.length===3&&!over&&!animating;
   if(ok&&solvedIdx.length>=1&&sharedCount()!==1) ok=false; /* must reuse exactly one solved word */
   document.getElementById("submitBtn").disabled=!ok;
@@ -1139,10 +1140,12 @@ function showResult(won,score,fancy,quiet){
   try{ shareImg.src=drawShareCard().toDataURL("image/png"); shareImg.style.display=""; }
   catch(e){ shareImg.style.display="none"; } /* never let a canvas hiccup block the result modal */
   shareImg.alt=resultDescription();
-  /* inline reopen button under the board */
+  /* the board's now-useless Submit button becomes the Results re-open button
+     (so there's no separate Results button below the board) */
+  const sb=document.getElementById("submitBtn");
+  if(sb){ sb.disabled=false; sb.textContent="Results"; sb.onclick=()=>openModal(); }
   const r=document.getElementById("result");
-  r.style.display="";
-  r.innerHTML="<div class='ctrls' style='margin-top:10px'><button class='hbtn' onclick='openModal()'>Results</button></div>";
+  r.style.display="none"; r.innerHTML="";
   if(isBeta){ document.getElementById("fbCard").style.display=""; initFb(); }
   if(!quiet) openModal(fancy);
   if(won){ if(quiet) renderTallyStatic(score); else runModalTally(score); }
@@ -1168,7 +1171,7 @@ function closeModal(){
   /* return focus to where it was, else the inline Results button */
   const back=modalLastFocus;
   if(back&&document.contains(back)&&back.offsetParent!==null) back.focus();
-  else { const rb=document.querySelector("#result .hbtn"); if(rb) rb.focus(); }
+  else { const rb=document.getElementById("submitBtn"); if(rb&&rb.offsetParent!==null) rb.focus(); }
 }
 document.addEventListener("keydown",e=>{
   const m=document.getElementById("modal");
@@ -1557,12 +1560,15 @@ function shareImage(btn){
    link to the clipboard. */
 function shareTextResult(btn){
   try{ if(window.x43share&&dailyKey) x43share(dailyKey); }catch(e){}
+  /* keep a deep link only for a shared custom/archive puzzle; the daily relies on the
+     "4x3.fun" line at the top, so nothing is appended to the bottom */
+  const deep=/^#(p|d|b)=/.test(location.hash)?location.href:"";
   (async()=>{
     if(navigator.share){
-      try{ await navigator.share({title:"4 × 3",text:resultDescription(true),url:shareUrl()}); return; }
+      try{ await navigator.share(Object.assign({title:"4 × 3",text:resultDescription()},deep?{url:deep}:{})); return; }
       catch(e){ if(e&&e.name==="AbortError") return; }
     }
-    copyText(resultDescription(true)+"\n"+shareUrl(),btn);
+    copyText(resultDescription()+(deep?"\n"+deep:""),btn);
   })();
 }
 
@@ -1592,12 +1598,11 @@ function ynPaint(){
 function resultEmojiRows(){
   return guesses.map(g=>g.map(w=>w===special?"🌟":EMOJI[cats.findIndex(c=>c.words.includes(w))]||"⬜").join("")).join("\n");
 }
-function resultDescription(noLink){
+function resultDescription(){
   const {won,score,ruleBreaker}=calcScore();
-  const head="4 × 3"+(dailyKey?"\n"+fmtDate(dailyKey):"");
-  const link=noLink?"":"\nhankgreen.com/fourbythree";
-  if(ruleBreaker) return head+"\n"+score+" points • RULE BREAKER 💀\n"+resultEmojiRows()+link;
-  return head+"\n"+(won?score+" points":"Out of guesses")+" • "+(mistakes?mistakes+" mistake"+(mistakes===1?"":"s"):"No mistakes")+"\n"+resultEmojiRows()+link;
+  const head="4x3.fun"+(dailyKey?"\n"+fmtDate(dailyKey):"");   /* top line doubles as the share link */
+  if(ruleBreaker) return head+"\n"+score+" points • RULE BREAKER 💀\n"+resultEmojiRows();
+  return head+"\n"+(won?score+" points":"Out of guesses")+" • "+(mistakes?mistakes+" mistake"+(mistakes===1?"":"s"):"No mistakes")+"\n"+resultEmojiRows();
 }
 function feedbackText(){
   const won=mistakes<MAXM;
