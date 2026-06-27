@@ -1664,15 +1664,29 @@ function recordHistory(){
         m:mistakes, s:cs2.score, ms:solveMs, st:streakWithToday(), ad:adClicked?1:0});
     }
   }catch(e){}
-  /* also stash the rendered share card PNG (separate, capped key so images can't
-     bloat the stats; trims the oldest if we ever hit the storage quota) */
+  /* cache a COMPACT preview for the history lightbox — a downscaled JPEG, NOT the full
+     PNG (the full-res card is regenerated fresh at share time, so the cache needn't be
+     full quality). this keeps x43_cards from eating the localStorage quota and starving
+     the saved-game / history keys. capped by count AND by a hard total-size budget. */
   try{
-    const url=drawShareCard().toDataURL("image/png");
+    const full=drawShareCard();
+    let url;
+    try{
+      const maxW=460, sc=Math.min(1,maxW/full.width);   /* the card is opaque, so JPEG is safe */
+      const c=document.createElement("canvas");
+      c.width=Math.round(full.width*sc); c.height=Math.round(full.height*sc);
+      c.getContext("2d").drawImage(full,0,0,c.width,c.height);
+      url=c.toDataURL("image/jpeg",0.85);
+    }catch(e){ url=full.toDataURL("image/png"); }       /* fall back to PNG if JPEG unsupported */
     const cards=JSON.parse(localStorage.getItem("x43_cards")||"{}");
     cards[dailyKey]=url;
     let ks=Object.keys(cards).sort();
-    while(ks.length>60) delete cards[ks.shift()];   /* keep the 60 most recent */
-    for(let t=0;t<10;t++){
+    while(ks.length>45) delete cards[ks.shift()];        /* keep the 45 most recent */
+    const BUDGET=1500000;                                /* …and never exceed ~1.5 MB total */
+    while(Object.keys(cards).length>1 && JSON.stringify(cards).length>BUDGET){
+      const o=Object.keys(cards).sort(); delete cards[o[0]];
+    }
+    for(let t=0;t<12;t++){
       try{ localStorage.setItem("x43_cards",JSON.stringify(cards)); break; }
       catch(err){ const o=Object.keys(cards).sort(); if(o.length<=1) break; delete cards[o[0]]; }
     }
