@@ -717,6 +717,24 @@ const DEFS={
     "Upper-Body Garments":{BLOUSE:"A loose, often dressier upper-body garment.",TANK:"A tank top: sleeveless and casual. Named for when they were part of swimwear, back when swimming pools were called \"swim tanks.\"",TOP:"A 'top' is anything you wear up top, but usually reserved for women's clothing."},
     "The Highest Point":{PEAK:"The pointed top of a mountain.",SUMMIT:"The highest point you can climb to.",TOP:"The very topmost point of anything."},
     "Bedroom Roles":{BOTTOM:"The partner who takes the more receptive or submissive role.",SWITCH:"Someone happy to play either role, depending on the mood.",TOP:"The partner who takes the more dominant or active role."}
+  },
+  CAN:{
+    "Food Containers":{JAR:"A jar: a wide-mouthed glass container for jam, pickles, and the like.",TIN:"A tin: a sealed metal food container (British for a can).",CAN:"A can: a sealed metal container for food or drink."},
+    "To Fire From a Job":{AXE:"To get the axe.",BOOT:"To get the boot.",CAN:"To get canned."},
+    "Slang for Prison":{CLINK:"The clink: old slang for jail, after a London prison.",PEN:"The pen: short for penitentiary, not the writing kind.",CAN:"The can: slang for jail, as in 'doing time in the can.'"},
+    "Double It For Dancing":{CHA:"Cha-cha: a flirty Latin ballroom dance.",GO:"Go-go dancers are often hired by clubs to set the mood for dancing.",CAN:"Can-can: the high-kicking French music-hall dance."}
+  },
+  FRY:{
+    "Baby Animals":{JOEY:"A joey: a baby kangaroo.",CUB:"A cub: a baby bear, lion, or fox.",FRY:"Fry: freshly hatched baby fish."},
+    "Units of a Potato Treat":{TOT:"A tot: one bite-sized tater tot.",CHIP:"A chip: a crispy fried potato piece (a British 'chip' is a fry).",FRY:"A fry: a single French fry."},
+    "Things You Can Do to a Potato":{BOIL:"Boil it in bubbling water.",ROAST:"Roast it in the oven until crisp.",FRY:"Fry it in hot oil."},
+    "French ___":{PRESS:"French press: the plunger-style coffee maker.",TOAST:"French toast: egg-soaked bread, griddled.",FRY:"French fry: a deep-fried potato stick."}
+  },
+  STOCK:{
+    "Investments":{GOLD:"A precious metal investors buy as a safe haven in uncertain times.",BONDS:"Loans to a government or company that pay interest.",STOCK:"A share of ownership in a company."},
+    "Savory Liquids":{GRAVY:"A savory sauce made from meat drippings.",JUS:"The natural meat juices served with a roast (as in au jus).",STOCK:"A savory liquid simmered from bones and vegetables (the base of most soups)."},
+    "Parts of a Musket":{LOCK:"The firing mechanism of an old gun.",BARREL:"The tube the bullet travels down.",STOCK:"The wooden shoulder piece — \"lock, stock, and barrel\" is also a saying that means \"all of it,\" or \"everything.\""},
+    "Kinds of Car Racing":{DRAG:"Straight-line acceleration over a short distance.",RALLY:"Racing on closed roads and rough terrain, stage by stage.",STOCK:"Stock car racing uses cars designed to look like standard sedans (NASCAR is the most famous)."}
   }
 };
 /* post-game easter egg: tap the hub to press it in and burst out emojis */
@@ -868,7 +886,12 @@ function renderSolvedList(){
   const el=document.getElementById("solvedList");
   el.innerHTML="";
   const defsOn = DEFS[special];   /* hover-definitions on revealed words (hub-known rows), no wait for game end */
-  solvedIdx.forEach(ci=>{
+  /* once the game is over, ALWAYS reveal all four categories (solved order first, then
+     any the player never got) so a loss can never hide the category you missed */
+  const order = over
+    ? [...solvedIdx, ...cats.map((_,i)=>i).filter(i=>!solvedIdx.includes(i))]
+    : solvedIdx;
+  order.forEach(ci=>{
     const c=cats[ci];
     const div=document.createElement("div");
     div.className="scat";
