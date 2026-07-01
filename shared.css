@@ -211,7 +211,7 @@
   /* text-only ads (no standing figure) shouldn't reserve the left image gutter */
   .promo-banner-plain{padding-left:16px;}
   /* Something Worth Knowing (SoCal event) — poster colour scheme: indigo/red-orange, gold, cream */
-  .promo-poster{position:absolute; left:9px; top:9px; width:110px; height:auto; border-radius:6px;}
+  .promo-poster{position:absolute; left:9px; top:50%; transform:translateY(-50%); width:110px; height:auto; border-radius:6px;}
   .promo-banner-swk{padding-left:134px; color:#f3ecdd;
     background:linear-gradient(120deg,#9c3b2c,#3a2f79 42%,#2b2c74); border-color:#f2c34e;}
   .promo-banner-swk a{color:#f7c948;}
