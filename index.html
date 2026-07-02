@@ -393,6 +393,9 @@ function startGame(){
   db.style.display=""; db.style.opacity="";
   const sb=document.getElementById("shuffleBtn");
   sb.style.display=""; sb.style.opacity=""; sb.disabled=false; shuffling=false;
+  /* un-do the game-over mutation that turned Submit into the Results button */
+  const smb=document.getElementById("submitBtn");
+  smb.textContent="Submit"; smb.onclick=()=>submitGuess(); smb.disabled=true;
   buildTiles();
   if(resuming){ restoreGame(saved); }
   else { if(firstLoad&&G) introDeal(); else layout(true); renderMist(); updateButtons(); }
