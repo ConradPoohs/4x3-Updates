@@ -68,7 +68,7 @@
       if(!ids.length) ids=poolIds(socal);
       return ids[Math.floor(Math.random()*ids.length)];
     }
-    function show(id){ SET("x43_lastad",id); render(byId[id]); }
+    function show(id){ SET("x43_lastad",id); window.x43ad=id; render(byId[id]); }
     function decide(socal){
       /* SoCal: show the event ad the very first time, then let it rotate like the rest */
       if(socal && LS("x43_swk_seen")!=="1"){ SET("x43_swk_seen","1"); show("swk"); }
@@ -104,6 +104,7 @@
           <button class="primary" id="submitBtn" onclick="submitGuess()" disabled>Submit</button>
         </div>
         <div class="mist" id="mist"></div>
+        <div class="timer" id="timer" aria-hidden="true"></div>
         <div class="solvedlist" id="solvedList"></div>
       </div>
       <div id="result" style="display:none" class="result"></div>
@@ -173,6 +174,7 @@ let cats=[], special="", slots=[], slots0=[], tiles={};
 let selection=[], solvedIdx=[], colorCat={}, locked=new Set();
 let mistakes=0, penalty=0, guesses=[], over=false, animating=false;
 let adClicked=false;   /* +AD_BONUS once per game if the player taps the ad */
+let adClickedId="";    /* which ad they tapped (for the stats beacon) */
 let startTime=0, solveMs=null; /* speed timer: starts on load, stops at the finish */
 let hubEmoji=null; /* emoji that bursts from the hub on the post-win tap (custom puzzles carry their own) */
 const MAXM=3;
@@ -303,7 +305,7 @@ function loadGame(){
 }
 function saveGame(){
   const k=gameKey(); if(!k) return;
-  try{ localStorage.setItem(k,JSON.stringify({v:1,s:special,slots0,solved:solvedIdx,m:mistakes,p:penalty,g:guesses,over,t0:startTime,sms:solveMs,ad:adClicked?1:0})); }catch(e){}
+  try{ localStorage.setItem(k,JSON.stringify({v:1,s:special,slots0,solved:solvedIdx,m:mistakes,p:penalty,g:guesses,over,t0:startTime,sms:solveMs,ad:adClicked?1:0,adi:adClickedId})); }catch(e){}
 }
 /* Rebuild the board state from a saved game, no animations, without
    re-counting stats (those were tallied once, on the real finish). */
@@ -321,7 +323,7 @@ function restoreGame(st){
     }
   });
   mistakes=Math.min(MAXM,st.m||0);
-  adClicked=!!st.ad;
+  adClicked=!!st.ad; adClickedId=st.adi||"";
   penalty=(st.p!==undefined)?st.p:(st.m||0)*15;
   startTime=st.t0||Date.now(); solveMs=(st.sms!==undefined)?st.sms:null;
   guesses=Array.isArray(st.g)?st.g:[];
@@ -380,7 +382,7 @@ function startGame(){
   if(hubSpinTween){ hubSpinTween.kill(); hubSpinTween=null; }
   hubFx.forEach(tw=>tw.kill()); hubFx=[];
   selection=[]; solvedIdx=[]; colorCat={}; locked=new Set();
-  mistakes=0; penalty=0; guesses=[]; over=false; animating=false; adClicked=false;
+  mistakes=0; penalty=0; guesses=[]; over=false; animating=false; adClicked=false; adClickedId="";
   startTime=Date.now(); solveMs=null;
   fb={diff:0,fun:0,special:""};
   document.getElementById("boardWrap").style.display="";
@@ -801,6 +803,12 @@ const DEFS={
     "Prison Locations":{YARD:"The open-air area where inmates exercise.",CANTEEN:"Where inmates buy snacks and supplies, or eat.",CELL:"The small locked room where a prisoner lives."},
     "Units of Solar":{PANEL:"The flat rooftop unit that gathers sunlight.",FARM:"A large field of panels generating power at scale.",CELL:"The individual silicon square; wire many together for a panel."},
     "Dragon Ball Villains":{FRIEZA:"The galactic tyrant who destroys Planet Vegeta.",BUU:"The pink, shape-shifting menace of the Z saga's finale.",CELL:"The green bio-android who hosts his own martial-arts tournament."}
+  },
+  TAG:{
+    "Playground Games":{FOURSQUARE:"Bounce the ball between four painted squares without flubbing your serve.","GAGA BALL":"A relatively new invention: dodgeball in a pit, where you smack the ball low to hit others below the knee.",TAG:"You're it! Chase someone down and touch them to pass it on."},
+    "Old School YouTube Formats":{HAUL:"A creator shows off stuff they just bought.",VLOG:"Often thought of as a day-in-the-life video diary.",TAG:"A video answering a set list of questions or tasks, then tagging others."},
+    "What # Might Mean":{POUND:"On a phone keypad, the # key goes by this name.",NUMBER:"Put # in front of a figure and it means \"number\", as in #1.",TAG:"On social media, # turns a word into a clickable tag."},
+    "Guys You Might Meet at the Skate Park":{DAN:"A perfectly ordinary lad.",PHIL:"Working on his kickflip.",TAG:"Short for \"Taggart,\" Tag is a super cool dude."}
   }
 };
 /* post-game easter egg: tap the hub to press it in and burst out emojis */
@@ -982,6 +990,18 @@ function renderMist(){
   for(let i=0;i<MAXM;i++) h+="<i"+(i<MAXM-mistakes?" class='spent'":"")+"></i>";
   document.getElementById("mist").innerHTML=h;
 }
+
+/* ---------- live timer (Settings → Show timer) ---------- */
+/* visibility is pure CSS (html.a11y-st .timer), so the menu checkbox applies live;
+   this just keeps the text fresh — counts up while playing, freezes at the solve */
+(function(){
+  const fmt=ms=>{ const s=Math.floor(ms/1000); return Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); };
+  setInterval(()=>{
+    const el=document.getElementById("timer"); if(!el||!A11Y.st||!startTime) return;
+    if(over){ if(solveMs!==null) el.textContent="⏱ "+fmt(solveMs); return; }  /* frozen after the game */
+    el.textContent="⏱ "+fmt(Date.now()-startTime);
+  },500);
+})();
 
 /* ---------- scoring ---------- */
 /* Hub First: every submitted guess (even wrong ones) led with the special word */
@@ -1787,6 +1807,7 @@ function recordHistory(){
       const cs2=calcScore(), ct=catTelemetry();
       x43beacon({p:dailyKey, rel:(dailyKey===todayStr())?1:0, w:cs2.won?1:0,
         m:mistakes, s:cs2.score, ms:solveMs, st:streakWithToday(), ad:adClicked?1:0,
+        adid:adClickedId||window.x43ad||"",   /* the ad they clicked, else the one on screen */
         c:ct.c, so:ct.so});
     }
   }catch(e){}
@@ -1822,7 +1843,7 @@ function recordHistory(){
    re-tally the result quietly so the bonus shows without re-popping the modal. */
 function onAdClick(){
   if(adClicked) return;
-  adClicked=true; saveGame();
+  adClicked=true; adClickedId=window.x43ad||""; saveGame();
   if(over){ recordHistory(); const cs=calcScore(); showResult(cs.won,cs.score,false,true); }
 }
 /* current consecutive-day streak from this browser's history (matches history.html) */

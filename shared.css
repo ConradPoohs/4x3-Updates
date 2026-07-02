@@ -93,6 +93,8 @@
   .mist{text-align:center; margin-top:12px; font-size:14px; color:#7a7264;}
   .mist i{display:inline-block; width:11px; height:11px; border-radius:50%; background:var(--bad); margin:0 3px;}
   .mist i.spent{background:#ddd5c7;}
+  .timer{display:none; text-align:center; margin-top:6px; font-size:14px; color:#7a7264; font-variant-numeric:tabular-nums;}
+  html.a11y-st .timer{display:block;}
   .solvedlist{margin-top:10px;}
   .scat{border-radius:10px; padding:5px 12px; margin:5px 0; text-align:center;
     display:flex; align-items:baseline; justify-content:center; gap:8px; flex-wrap:wrap;}
