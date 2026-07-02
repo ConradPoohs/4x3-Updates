@@ -36,23 +36,11 @@
   <!-- desktop sidebar promo (wide screens only) -->
   <aside class="promo-side"></aside>
 
-  <!-- ===== rotating promo pool — each load shows a different ad than this visitor saw last ===== -->
+  <!-- ===== rotating promo pool — ads live in promos.js (one edit updates the game AND the dashboard) ===== -->
+  <script src="promos.js"></script>
   <script>
   (function(){
-    var ADS=[
-      {id:"aha",bc:"promo-banner-maya",sc:"promo-side-maya",
-       banner:`<img class="promo-maya" src="maya.png" alt="Maya Higa"> Maya Higa is our most recent guest on <b><a href="https://www.youtube.com/watch?v=39KyWSyGfjY" target="_blank" rel="noopener">Ask Hank Anything!</a></b> We talk quite a lot about fish farts, which are surprisingly complex!`,
-       side:`<img class="promo-maya-side" src="maya.png" alt="Maya Higa"><div class="promo-kicker">From Hank</div><p class="promo-body">Maya Higa is our most recent guest on <b><a href="https://www.youtube.com/watch?v=39KyWSyGfjY" target="_blank" rel="noopener">Ask Hank Anything!</a></b> We talk quite a lot about fish farts, which are surprisingly complex!</p>`},
-      {id:"ff",bc:"",sc:"",
-       banner:`<img class="promo-bean" src="hankbeantrans.png" alt=""> Need a cozy tool to help you take back control from social media apps? My app <b>Focus Friend</b> is zero cost and ad-free!! <a href="https://apps.apple.com/us/app/focus-friend-by-hank-green/id6742278016" target="_blank" rel="noopener">iPhone</a> · <a href="https://play.google.com/store/apps/details?id=com.underthing.focus.friend" target="_blank" rel="noopener">Android</a>`,
-       side:`<img class="promo-img" src="focusfriendtrans.png" alt="Focus Friend"><div class="promo-kicker">From Hank</div><p class="promo-body">Need a cozy tool to help you take back control from social media apps? My app <b>Focus Friend</b> is zero cost and ad-free!!</p><div class="promo-apps"><a href="https://apps.apple.com/us/app/focus-friend-by-hank-green/id6742278016" target="_blank" rel="noopener">iPhone</a><a href="https://play.google.com/store/apps/details?id=com.underthing.focus.friend" target="_blank" rel="noopener">Android</a></div>`},
-      {id:"humans",bc:"promo-banner-plain",sc:"",
-       banner:`I got a text from a friend this week calling the episode of “Humans” with Helen Hunt “Truly some of your best work” so… maybe you want to <a href="https://www.humanswithhank.com/" target="_blank" rel="noopener">check that out</a>.`,
-       side:`<div class="promo-kicker">From Hank</div><p class="promo-body">I got a text from a friend this week calling the episode of “Humans” with Helen Hunt “Truly some of your best work” so… maybe you want to <a href="https://www.humanswithhank.com/" target="_blank" rel="noopener">check that out</a>.</p>`},
-      {id:"swk",bc:"promo-banner-swk",sc:"promo-side-swk",socal:true,
-       banner:`<img class="promo-poster" src="SWK2.png" alt="Something Worth Knowing"> It seems that you are in SoCal. FYI, Complexly is putting on a weird and special event featuring me, <b>Simone Giertz</b>, <b>Mark Rober</b>, and more! September 16 - <a href="https://complexly.org/somethingworthknowing/" target="_blank" rel="noopener">Something Worth Knowing</a>.`,
-       side:`<img class="promo-swk-side" src="SWK2.png" alt="Something Worth Knowing"><div class="promo-kicker">Southern California</div><p class="promo-body">It seems that you are in SoCal. FYI, Complexly is putting on a weird and special event featuring me, <b>Simone Giertz</b>, <b>Mark Rober</b>, and more! September 16 - <a href="https://complexly.org/somethingworthknowing/" target="_blank" rel="noopener">Something Worth Knowing</a>.</p>`}
-    ];
+    var ADS=window.X43_ADS||[];
     var byId={}; ADS.forEach(function(a){ byId[a.id]=a; });
     function LS(k){ try{return localStorage.getItem(k);}catch(e){return null;} }
     function SET(k,v){ try{localStorage.setItem(k,v);}catch(e){} }
@@ -68,7 +56,7 @@
       if(!ids.length) ids=poolIds(socal);
       return ids[Math.floor(Math.random()*ids.length)];
     }
-    function show(id){ SET("x43_lastad",id); window.x43ad=id; render(byId[id]); }
+    function show(id){ if(!byId[id]) return; SET("x43_lastad",id); window.x43ad=id; render(byId[id]); }
     function decide(socal){
       /* SoCal: show the event ad the very first time, then let it rotate like the rest */
       if(socal && LS("x43_swk_seen")!=="1"){ SET("x43_swk_seen","1"); show("swk"); }
@@ -122,8 +110,11 @@
       </div>
       <label style="display:block;font-size:14px;margin-bottom:4px">Notes for the creator</label>
       <textarea id="fbNotes" placeholder="Too easy? A category felt unfair? A word fits two groups?"></textarea>
+      <label style="display:block;font-size:14px;margin:10px 0 4px">Your name or handle (optional)</label>
+      <input type="text" id="fbName" placeholder="So Hank knows who tested" autocomplete="nickname">
       <div class="rowbtns" style="margin-top:10px">
-        <button class="hbtn primary" id="fbCopy" onclick="copyFeedback()">Copy feedback</button>
+        <button class="hbtn primary" id="fbSend" onclick="sendFeedback()">Send feedback</button>
+        <button class="hbtn" id="fbCopy" onclick="copyFeedback()">Copy</button>
         <a id="fbMail" class="hbtn" style="display:none;text-decoration:none">Email it</a>
       </div>
     </div>
@@ -168,6 +159,8 @@ const G=window.gsap||null;
 
 /* ---------- state ---------- */
 let puzzle=null, isBeta=false, dailyKey=null;
+let betaId="";   /* keys beta feedback rows server-side: hash of a #b= payload, or "d"+date for #t= links */
+let betaDate=null; /* the scheduled date a #t= test link points at (shown in the date pill) */
 let loadedDay=null, pendingKey=null, isPreview=false;
 let puzzleData=null; /* last good puzzles.json, reused by the archive */
 let cats=[], special="", slots=[], slots0=[], tiles={};
@@ -198,35 +191,55 @@ function hubKnown(){ return solvedIdx.length>=2||over; }
    to their own pages (linked in the footer). showView stays a thin shim. */
 function showView(v){ if(v==="play"&&!introPlaying) layout(true); }
 
+/* stable little fingerprint of a beta link's payload — two FNV-1a passes,
+   base36. Identifies the puzzle server-side without shipping its contents. */
+function betaHash(s){
+  let h1=0x811c9dc5, h2=0x811c9dc5;
+  for(let i=0;i<s.length;i++){
+    h1=Math.imul(h1^s.charCodeAt(i),0x01000193)>>>0;
+    h2=Math.imul(h2^s.charCodeAt(i),0x85ebca6b)>>>0;
+  }
+  return (h1.toString(36)+h2.toString(36)).slice(0,14);
+}
+
 /* ---------- init / hash ---------- */
 async function init(){
   const h=location.hash;
-  isBeta=false; puzzle=null; dailyKey=null;
+  isBeta=false; puzzle=null; dailyKey=null; betaId=""; betaDate=null;
   loadedDay=todayStr(); pendingKey=null; isPreview=false;
   scheduleRollover();
-  let archiveDate=null;
+  let archiveDate=null, testDate=null;
   try{
-    if(h.startsWith("#b=")){ puzzle=decPuzzle(h.slice(3)); isBeta=true; }
+    if(h.startsWith("#b=")){ puzzle=decPuzzle(h.slice(3)); isBeta=true; betaId=betaHash(h.slice(3)); }
     else if(h.startsWith("#p=")){ puzzle=decPuzzle(h.slice(3)); }
     else if(h.startsWith("#d=")){ archiveDate=decodeURIComponent(h.slice(3)); }
+    else if(h.startsWith("#t=")){ testDate=decodeURIComponent(h.slice(3)); } /* beta-test an already-scheduled puzzle */
   }catch(e){ toast("Couldn't read that puzzle link — showing today's game."); }
   if(!puzzle){
-    /* no link (or an #d= archive date): load from puzzles.json — that specific
-       day if given and valid, otherwise the most recent entry ≤ today */
+    /* no link (or an #d= archive / #t= test date): load from puzzles.json — that
+       specific day if given and valid, otherwise the most recent entry ≤ today */
     try{
       const r=await fetch(pjURL(),{cache:"no-store"});
       if(r.ok){
         const data=await r.json();
         puzzleData=data;
         const today=todayStr();
-        let k=null;
-        if(archiveDate&&data[archiveDate]&&archiveDate<=today){
-          k=archiveDate;
+        if(testDate&&data[testDate]){
+          /* scheduled-puzzle test link: beta mode, feedback reporting, and NO
+             dailyKey — a test run must never touch streaks, history, or saves */
+          puzzle=decPuzzle(data[testDate]); isBeta=true; betaDate=testDate;
+          betaId="d"+testDate.replace(/[^0-9]/g,"");
         } else {
-          const keys=Object.keys(data).filter(k=>k<=today).sort();
-          if(keys.length) k=keys[keys.length-1];
+          if(testDate) toast("No puzzle scheduled for that date — showing today's game.");
+          let k=null;
+          if(archiveDate&&data[archiveDate]&&archiveDate<=today){
+            k=archiveDate;
+          } else {
+            const keys=Object.keys(data).filter(k=>k<=today).sort();
+            if(keys.length) k=keys[keys.length-1];
+          }
+          if(k){ puzzle=decPuzzle(data[k]); dailyKey=k; }
         }
-        if(k){ puzzle=decPuzzle(data[k]); dailyKey=k; }
       }
     }catch(e){}
   }
@@ -239,6 +252,7 @@ function setupPlay(){
   /* today's daily shows no date line at all; archived (past) puzzles get a dated pill */
   let sub="";
   if(dailyKey&&dailyKey!==todayStr()) sub=fmtDate(dailyKey);
+  else if(isBeta&&betaDate) sub="Testing the puzzle for "+fmtDate(betaDate);
   const ps=document.getElementById("pSub");
   ps.textContent=sub;
   ps.classList.remove("today");
@@ -263,7 +277,7 @@ function scheduleRollover(){
 }
 async function checkNewDay(){
   scheduleRollover();
-  if(location.hash.startsWith("#b=")||location.hash.startsWith("#p=")||location.hash.startsWith("#d=")) return; /* linked or archived puzzle, not the daily */
+  if(location.hash.startsWith("#b=")||location.hash.startsWith("#p=")||location.hash.startsWith("#d=")||location.hash.startsWith("#t=")) return; /* linked, archived, or test puzzle, not the daily */
   if(isPreview&&!over) return;                 /* don't stomp on a builder test run */
   if(todayStr()===loadedDay) return;           /* same day, nothing to do */
   loadedDay=todayStr();
@@ -1105,6 +1119,13 @@ function endGame(won){
   saveStats(won,score,mistakes);
   recordHistory();
   showStreakTag();
+  /* beta plays auto-report the solve result (stars/notes follow if they use the card) */
+  try{
+    if(isBeta&&betaId&&window.x43beta){
+      let nm=""; try{ nm=localStorage.getItem("x43_name")||""; }catch(e){}
+      x43beta({bp:betaId, hub:special, name:nm, w:won?1:0, m:mistakes, ms:solveMs, so:catTelemetry().so});
+    }
+  }catch(e){}
   /* no more selecting/shuffling to undo */
   const db=document.getElementById("deselBtn"), sb=document.getElementById("shuffleBtn");
   if(G) G.to([db,sb],{opacity:0,duration:.4,onComplete:()=>{db.style.display="none"; sb.style.display="none";}});
@@ -1729,6 +1750,23 @@ function initFb(){
   }
   starPaint(); ynPaint();
   document.getElementById("fbMail").style.display=puzzle.e?"":"none";
+  try{ document.getElementById("fbName").value=localStorage.getItem("x43_name")||""; }catch(e){}
+}
+/* POST the card straight to the stats Worker (upserts, so re-sends just update) */
+function sendFeedback(){
+  const name=document.getElementById("fbName").value.trim();
+  try{ if(name) localStorage.setItem("x43_name",name); }catch(e){}
+  try{
+    if(window.x43beta&&betaId){
+      x43beta({bp:betaId, hub:special, name:name,
+        w:mistakes<MAXM?1:0, m:mistakes, ms:solveMs, so:catTelemetry().so,
+        diff:fb.diff, fun:fb.fun, sp:(fb.special||"").toLowerCase(),
+        notes:document.getElementById("fbNotes").value.trim(), fb:1});
+    }
+  }catch(e){}
+  const b=document.getElementById("fbSend");
+  b.textContent="Sent — thank you ✓"; b.disabled=true;
+  setTimeout(()=>{ b.textContent="Send again"; b.disabled=false; },4000);
 }
 function starPaint(){
   document.querySelectorAll("#fbDiff button").forEach((b,i)=>b.classList.toggle("on",i<fb.diff));

@@ -163,6 +163,7 @@
   .fb .stars button{font-size:24px; background:none; border:none; cursor:pointer; filter:grayscale(1); padding:2px;}
   .fb .stars button.on{filter:none;}
   .fb textarea{width:100%; min-height:70px; border:1.5px solid var(--line); border-radius:8px; padding:8px; font-size:14px; font-family:inherit;}
+  .fb input[type=text]{width:100%; border:1.5px solid var(--line); border-radius:8px; padding:8px; font-size:14px; font-family:inherit; box-sizing:border-box;}
   .yn{display:flex; gap:8px; margin:4px 0 10px;}
   .yn button{padding:6px 16px; border-radius:999px; border:1.5px solid var(--ink); background:transparent; cursor:pointer; font-weight:600; color:var(--ink);}
   .yn button.on{background:var(--ink); color:var(--paper);}
