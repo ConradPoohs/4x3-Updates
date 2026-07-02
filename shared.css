@@ -4,7 +4,11 @@
     --bad:#d05b5b; --good:#56b870;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
-  body{margin:0; background:var(--paper); color:var(--ink);
+  body{margin:0; color:var(--ink);
+    /* very slight warm fade + faint SVG paper-grain noise on top */
+    background:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E") fixed,
+      var(--paper) linear-gradient(180deg,#fdfbf6 0%,var(--paper) 45%,#f5efe3 100%) fixed;
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
   .wrap{max-width:560px; margin:0 auto; padding:20px 16px 60px; position:relative;}
   /* subtle current-streak note tucked into the top-right, next to the logo */
