@@ -173,6 +173,7 @@ let puzzleData=null; /* last good puzzles.json, reused by the archive */
 let cats=[], special="", slots=[], slots0=[], tiles={};
 let selection=[], solvedIdx=[], colorCat={}, locked=new Set();
 let mistakes=0, penalty=0, guesses=[], over=false, animating=false;
+let clicks=0;   /* tile taps that changed the selection (selects + deselects) */
 let adClicked=false;   /* +AD_BONUS once per game if the player taps the ad */
 let adClickedId="";    /* which ad they tapped (for the stats beacon) */
 let startTime=0, solveMs=null; /* speed timer: starts on load, stops at the finish */
@@ -305,7 +306,7 @@ function loadGame(){
 }
 function saveGame(){
   const k=gameKey(); if(!k) return;
-  try{ localStorage.setItem(k,JSON.stringify({v:1,s:special,slots0,solved:solvedIdx,m:mistakes,p:penalty,g:guesses,over,t0:startTime,sms:solveMs,ad:adClicked?1:0,adi:adClickedId})); }catch(e){}
+  try{ localStorage.setItem(k,JSON.stringify({v:1,s:special,slots0,solved:solvedIdx,m:mistakes,p:penalty,g:guesses,over,t0:startTime,sms:solveMs,ad:adClicked?1:0,adi:adClickedId,ck:clicks})); }catch(e){}
 }
 /* Rebuild the board state from a saved game, no animations, without
    re-counting stats (those were tallied once, on the real finish). */
@@ -327,6 +328,7 @@ function restoreGame(st){
   penalty=(st.p!==undefined)?st.p:(st.m||0)*15;
   startTime=st.t0||Date.now(); solveMs=(st.sms!==undefined)?st.sms:null;
   guesses=Array.isArray(st.g)?st.g:[];
+  clicks=st.ck||0;   /* 0 on pre-feature saves → click awards simply don't fire */
   if(st.over){
     over=true;
     for(const ci of solvedIdx) for(const w of cats[ci].words) locked.add(w);
@@ -383,6 +385,7 @@ function startGame(){
   hubFx.forEach(tw=>tw.kill()); hubFx=[];
   selection=[]; solvedIdx=[]; colorCat={}; locked=new Set();
   mistakes=0; penalty=0; guesses=[]; over=false; animating=false; adClicked=false; adClickedId="";
+  clicks=0;
   startTime=Date.now(); solveMs=null;
   fb={diff:0,fun:0,special:""};
   document.getElementById("boardWrap").style.display="";
@@ -849,8 +852,10 @@ function tapWord(w){
       toast("All four categories share a word",3600);
   }
   else return;
+  clicks++;   /* only taps that changed the selection count */
   if(G) G.fromTo(tiles[w].querySelector(".tin"),{scale:.95},{scale:1,duration:.3,ease:"back.out(2.5)"});
   paintTiles(); updateButtons();
+  saveGame();   /* keep the click count honest across a mid-game refresh */
 }
 function deselectAll(){ if(animating) return; selection=[]; paintTiles(); updateButtons(); }
 /* Shuffle: re-randomize only the still-in-play tiles among the slots they occupy.
@@ -922,10 +927,14 @@ function solveAnim(ci,sel){
     paintTiles();
     layout(false);
     saveGame();
-    setTimeout(()=>{
+    if(solvedIdx.length===4){
+      /* final solve: stay locked while the finished board settles, then the ending */
+      setTimeout(()=>{ animating=false; updateButtons(); endGame(true); },G?1250:60);
+    } else {
+      /* board state is already committed — the glide is purely visual, so unlock
+         now instead of ~1.3s later (players want to re-tap the hub right away) */
       animating=false; updateButtons();
-      if(solvedIdx.length===4) endGame(true);
-    },G?1250:60);
+    }
   };
   if(G){
     sel.forEach((w,k)=>{
@@ -1040,6 +1049,9 @@ function calcScore(){
   let silverPlaque=allRewards&&solveMs!==null&&solveMs<120000&&!goldPlaque; /* perfect, 90–120s */
   let perfectBonus=allRewards?200-score:0;
   score+=perfectBonus;
+  const minClicks=won&&clicks>0&&clicks<=MIN_CLICKS;  /* 4 guesses × 3 tile taps, nothing wasted */
+  const megaClicks=won&&clicks>=MEGA_CLICKS;          /* no points, just an achievement */
+  if(minClicks) score+=CLICK_BONUS;                    /* added after the 200 top-up so it isn't absorbed */
   const streak=(won&&dailyKey===todayStr())?streakWithToday():0;  /* +1/day of streak — release-day plays only */
   score+=streak;
   const adBonus=(won&&adClicked)?AD_BONUS:0;       /* thanks for clicking the ad */
@@ -1052,7 +1064,7 @@ function calcScore(){
   const prevAvg=past.length?past.reduce((a,b)=>a+b,0)/past.length:null;
   const topScore=won&&prevBest!==null&&score>prevBest;                 /* a new all-time high */
   const beatAvg=won&&prevAvg!==null&&score>prevAvg&&!topScore;          /* above your average (top score already implies it) */
-  return {won, perfect, hubFirst, hubMiddle, ruleBreaker, purpleFirst, blueFirst, revRainbow, rainbow, grellow, grue, godDamnit, dayBefore, fast, allRewards, goldPlaque, silverPlaque, perfectBonus, streak, adBonus, topScore, beatAvg, score};
+  return {won, perfect, hubFirst, hubMiddle, ruleBreaker, purpleFirst, blueFirst, revRainbow, rainbow, grellow, grue, godDamnit, dayBefore, fast, minClicks, megaClicks, allRewards, goldPlaque, silverPlaque, perfectBonus, streak, adBonus, topScore, beatAvg, score};
 }
 
 /* ---------- end ---------- */
@@ -1158,6 +1170,7 @@ function tallyItems(cs){
   if(cs.revRainbow) it.push(["🌈","Reverse Rainbow",RAINBOW_BONUS]);
   if(cs.fast) it.push(["⚡","Solved under 90 seconds",SPEED_BONUS]);
   if(cs.perfectBonus) it.push(["💯","Perfect Game",cs.perfectBonus]);
+  if(cs.minClicks) it.push(["🖱️","Efficient — the "+MIN_CLICKS+"-click minimum",CLICK_BONUS]);
   if(cs.streak>0) it.push(["🔥",cs.streak+"-day streak",cs.streak]);
   if(cs.adBonus) it.push(["📣","Thanks for the tap",cs.adBonus]);
   if(cs.topScore) it.push(["🏆","Top Score — a new personal best!",0]);
@@ -1168,6 +1181,7 @@ function tallyItems(cs){
   if(cs.grue) it.push(["🦚","Grue — purple → green → blue → yellow",0]);
   if(cs.godDamnit) it.push(["😤","God Damnit! — perfect but for one swap",0]);
   if(cs.dayBefore) it.push(["🌙","The Day Before — played 12–1am",0]);
+  if(cs.megaClicks) it.push(["🖲️","Click Happy — "+clicks+" clicks. Why?",0]);
   if(cs.goldPlaque) it.push(["🥇","Gold Plaque — perfect, under 90s",0]);
   else if(cs.silverPlaque) it.push(["🥈","Silver Plaque — perfect, under 120s",0]);
   return it;
