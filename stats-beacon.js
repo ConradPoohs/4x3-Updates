@@ -38,13 +38,20 @@
     } catch (e) {}
   }
 
-  /* Call once when a puzzle is finished. ev = {p, rel, w, m, s, ms, st} */
+  /* Call once when a puzzle is finished.
+   * ev = {p, rel, w, m, s, ms, st, ad, c, so}
+   *   c  = [m0,m1,m2,m3] mistakes attributed per color (blue,green,yellow,purple)
+   *   so = solve order as a digit string of color indices, e.g. "3102"        */
   window.x43beacon = function (ev) {
     var id = anon(); if (!id || !ev || !ev.p) return;
+    var c = Array.isArray(ev.c) ? ev.c.slice(0, 4).map(function (n) { return n | 0; }) : [0, 0, 0, 0];
     send("/e", {
-      v: 1, id: id, p: ev.p,
+      v: 2, id: id, p: ev.p,
       rel: ev.rel ? 1 : 0, w: ev.w ? 1 : 0,
       m: ev.m | 0, s: ev.s | 0, ms: ev.ms | 0, st: ev.st | 0,
+      ad: ev.ad ? 1 : 0,
+      adid: String(ev.adid || "").toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 16),
+      c: c, so: String(ev.so || "").replace(/[^0-3]/g, "").slice(0, 4),
       src: src(), dev: dev()
     });
   };
@@ -53,5 +60,25 @@
   window.x43share = function (p) {
     var id = anon(); if (!id || !p) return;
     send("/s", { id: id, p: p });
+  };
+
+  /* Beta-puzzle result / feedback. Fired automatically on finish (fb:0, solve
+   * fields only) and again when the tester taps "Send feedback" (fb:1, adds
+   * stars / spotted-hub / notes / name). ev = {bp, hub, name, w, m, ms, so,
+   * diff, fun, sp, notes, fb} — bp is the short hash of the #b= payload. */
+  window.x43beta = function (ev) {
+    var id = anon(); if (!id || !ev || !ev.bp) return;
+    send("/fb", {
+      v: 1, id: id, bp: String(ev.bp),
+      hub: String(ev.hub || "").slice(0, 24),
+      name: String(ev.name || "").slice(0, 40),
+      w: ev.w ? 1 : 0, m: ev.m | 0, ms: ev.ms | 0,
+      so: String(ev.so || "").replace(/[^0-3]/g, "").slice(0, 4),
+      diff: ev.diff | 0, fun: ev.fun | 0,
+      sp: String(ev.sp || "").toLowerCase(),
+      notes: String(ev.notes || "").slice(0, 2000),
+      fb: ev.fb ? 1 : 0,
+      dev: dev()
+    });
   };
 })();
