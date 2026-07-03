@@ -270,6 +270,21 @@
     .promo-apps a:focus-visible{outline:none; box-shadow:0 0 0 2px var(--paper),0 0 0 4px #1f6feb;}
   }
   /* ---------- score tally (counter + icon badges in the result modal) ---------- */
+  /* streak-milestone banner: a gold bar across the top of the results card */
+  .mstreak{margin:-4px 0 14px; padding:11px 12px 12px; text-align:center; border-radius:12px;
+    font-weight:800; font-size:19px; letter-spacing:.06em; color:#5a4404;
+    background:linear-gradient(100deg,#f6d365 0%,#fde9a8 28%,#f3c94f 55%,#fbe08a 82%,#f6d365 100%);
+    background-size:220% 100%; animation:mstreak-shimmer 3.2s linear infinite;
+    box-shadow:0 2px 10px rgba(212,160,23,.35), inset 0 0 0 1.5px rgba(255,255,255,.55);}
+  .mstreak span{display:block; font-size:12.5px; font-weight:600; letter-spacing:.02em; margin-top:3px; color:#7a5d10;}
+  /* silver tier (streaks of 5 and 10) */
+  .mstreak.sv{color:#3d434e;
+    background:linear-gradient(100deg,#e3e7ee 0%,#f7f9fc 28%,#c3cad5 55%,#eef1f6 82%,#e3e7ee 100%);
+    background-size:220% 100%;
+    box-shadow:0 2px 10px rgba(136,143,157,.4), inset 0 0 0 1.5px rgba(255,255,255,.65);}
+  .mstreak.sv span{color:#566070;}
+  @keyframes mstreak-shimmer{from{background-position:0% 0;}to{background-position:220% 0;}}
+  @media (prefers-reduced-motion: reduce){ .mstreak{animation:none;} }
   .tally-count{font-size:54px; font-weight:800; text-align:center; color:var(--ink); line-height:1; margin:6px 0 12px;}
   .tally-icons{display:flex; flex-wrap:wrap; gap:7px; justify-content:center; min-height:1px;}
   .tally-ico{width:40px; height:40px; display:flex; align-items:center; justify-content:center; font-size:22px;

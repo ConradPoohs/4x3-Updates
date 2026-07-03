@@ -26,6 +26,7 @@ const CLICK_BONUS=5;                  /* solved at the theoretical minimum numbe
 const MIN_CLICKS=12;                  /* 4 guesses × 3 tile taps, zero wasted motion */
 const MEGA_CLICKS=50;                 /* ...and the opposite (no points, just concern) */
 const RULE_BREAKER_SCORE=-100;
+const STREAK_MILESTONES=[5,10,25,50,100];  /* streak days that earn a special card */
 /* solve-order achievements (category indices: 0 blue, 1 green, 2 yellow, 3 purple) */
 const REV_RAINBOW=[3,0,1,2];          /* purple → blue → green → yellow (+30) */
 const RAINBOW=[2,1,0,3];              /* yellow → green → blue → purple (the forward rainbow card) */
