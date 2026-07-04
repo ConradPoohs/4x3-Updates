@@ -1935,7 +1935,7 @@ function resultEmojiRows(){
 }
 function resultDescription(){
   const {won,score,ruleBreaker}=calcScore();
-  const head="4x3.fun"+(dailyKey?"\n"+fmtDate(dailyKey):"");   /* top line doubles as the share link */
+  const head="https://4x3.fun"+(dailyKey?"\n"+fmtDate(dailyKey):"");   /* top line doubles as the share link — full scheme so every app linkifies it */
   if(ruleBreaker) return head+"\n"+score+" points • RULE BREAKER 💀\n"+resultEmojiRows();
   return head+"\n"+(won?score+" points":"Out of guesses")+" • "+(mistakes?mistakes+" mistake"+(mistakes===1?"":"s"):"No mistakes")+"\n"+resultEmojiRows();
 }

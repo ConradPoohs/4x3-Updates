@@ -11,9 +11,6 @@
  *         banner/side  the HTML itself
  */
 window.X43_ADS=[
-  {id:"aha",name:"Ask Hank Anything (Maya)",bc:"promo-banner-maya",sc:"promo-side-maya",
-   banner:`<img class="promo-maya" src="maya.png" alt="Maya Higa"> Maya Higa is our most recent guest on <b><a href="https://www.youtube.com/watch?v=39KyWSyGfjY" target="_blank" rel="noopener">Ask Hank Anything!</a></b> We talk quite a lot about fish farts, which are surprisingly complex!`,
-   side:`<img class="promo-maya-side" src="maya.png" alt="Maya Higa"><div class="promo-kicker">From Hank</div><p class="promo-body">Maya Higa is our most recent guest on <b><a href="https://www.youtube.com/watch?v=39KyWSyGfjY" target="_blank" rel="noopener">Ask Hank Anything!</a></b> We talk quite a lot about fish farts, which are surprisingly complex!</p>`},
   {id:"ff",name:"Focus Friend",bc:"",sc:"",
    banner:`<img class="promo-bean" src="hankbeantrans.png" alt=""> Need a cozy tool to help you take back control from social media apps? My app <b>Focus Friend</b> is zero cost and ad-free!! <a href="https://apps.apple.com/us/app/focus-friend-by-hank-green/id6742278016" target="_blank" rel="noopener">iPhone</a> · <a href="https://play.google.com/store/apps/details?id=com.underthing.focus.friend" target="_blank" rel="noopener">Android</a>`,
    side:`<img class="promo-img" src="focusfriendtrans.png" alt="Focus Friend"><div class="promo-kicker">From Hank</div><p class="promo-body">Need a cozy tool to help you take back control from social media apps? My app <b>Focus Friend</b> is zero cost and ad-free!!</p><div class="promo-apps"><a href="https://apps.apple.com/us/app/focus-friend-by-hank-green/id6742278016" target="_blank" rel="noopener">iPhone</a><a href="https://play.google.com/store/apps/details?id=com.underthing.focus.friend" target="_blank" rel="noopener">Android</a></div>`},
