@@ -218,7 +218,10 @@
   .srow .v{font-weight:700; white-space:nowrap;}
   .srow .v.good{color:#3b8f57;} .srow .v.bad{color:var(--bad);}
   .srow .sd{color:#7a7264; font-size:13px; text-align:right; max-width:56%;}
-  .scat .def{cursor:help;}
+  .scat .def{cursor:help;
+    text-decoration:underline dashed rgba(43,38,32,.4);
+    text-decoration-thickness:1px; text-underline-offset:3px;}
+  .scat .hub.def{text-decoration-color:rgba(184,134,11,.55);} /* hub keeps its gold, softly */
   #deftip{position:fixed; z-index:130; max-width:240px; background:var(--ink); color:var(--paper);
     font-size:12.5px; line-height:1.4; padding:8px 11px; border-radius:9px;
     box-shadow:0 6px 18px rgba(43,38,32,.3); opacity:0; transform:translateY(4px);
