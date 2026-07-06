@@ -62,6 +62,12 @@
     send("/s", { id: id, p: p });
   };
 
+  /* Public per-puzzle community stats (aggregate only; server caches ~5 min).
+   * Resolves to the parsed JSON, or rejects — caller decides how to fail soft. */
+  window.x43stats = function (p) {
+    return fetch(EP + "/p?p=" + encodeURIComponent(p)).then(function (r) { return r.json(); });
+  };
+
   /* Beta-puzzle result / feedback. Fired automatically on finish (fb:0, solve
    * fields only) and again when the tester taps "Send feedback" (fb:1, adds
    * stars / spotted-hub / notes / name). ev = {bp, hub, name, w, m, ms, so,
