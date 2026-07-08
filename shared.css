@@ -286,6 +286,9 @@
   /* Ask Hank Anything brand: cream → orange, orange border, brown text */
   /* text-only ads (no standing figure) shouldn't reserve the left image gutter */
   .promo-banner-plain{padding-left:16px;}
+  /* SMUSH wordmark sits vertically centred at the left */
+  .promo-smush{position:absolute; left:10px; top:50%; transform:translateY(-50%); width:96px; height:auto; margin:0;}
+  .promo-banner-smush{padding-left:118px;}
   /* Something Worth Knowing (SoCal event) — poster colour scheme: indigo/red-orange, gold, cream */
   .promo-poster{position:absolute; left:9px; top:50%; transform:translateY(-50%); width:110px; height:auto; border-radius:6px;}
   .promo-banner-swk{padding-left:134px; color:#f3ecdd;
