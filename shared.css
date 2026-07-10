@@ -177,6 +177,9 @@
     color:var(--ink); border:1.5px solid var(--ink); border-radius:999px; padding:6px 15px;
     transition:background .25s ease, color .25s ease;}
   .humans-promo:hover .hp-cta{background:var(--ink); color:var(--paper);}
+  /* bouncing hank heads (the Button Smasher reward) */
+  .hank-sprite{position:fixed; z-index:220; height:auto; cursor:pointer;
+    user-select:none; -webkit-user-drag:none;}
   /* the "listen on" sheet, 4×3-skinned */
   .hm-title{font-size:20px; font-weight:800; text-align:center; margin:6px 8px 2px; color:var(--ink);
     letter-spacing:.01em;}

@@ -52,7 +52,6 @@ const COLOR_NAMES=["blue","green","yellow","purple"];
 const MISS=15, MISS_LATE=30;
 const HUB_BONUS=20, HUB_MID_BONUS=20;
 const PURPLE_BONUS=15, RAINBOW_BONUS=30, SPEED_BONUS=30, BLUE_BONUS=5;
-const AD_BONUS=5;   /* clicking the ad this game */
 const CLICK_BONUS=5;                  /* solved at the theoretical minimum number of clicks */
 const MIN_CLICKS=12;                  /* 4 guesses × 3 tile taps, zero wasted motion */
 const MEGA_CLICKS=50;                 /* ...and the opposite (no points, just concern) */

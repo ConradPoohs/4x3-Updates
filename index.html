@@ -205,7 +205,7 @@ let selection=[], solvedIdx=[], colorCat={}, locked=new Set();
 let mistakes=0, penalty=0, guesses=[], over=false, animating=false;
 let clicks=0;   /* tile taps that changed the selection (selects + deselects) */
 let debugStreak=0; /* streak-preview override (type s5/s10/s25/s50/s100) — never persisted */
-let adClicked=false;   /* +AD_BONUS once per game if the player taps the ad */
+let adClicked=false;   /* ad-click tracking (stats only — no points) */
 let adClickedId="";    /* which ad they tapped (for the stats beacon) */
 let startTime=0, solveMs=null; /* speed timer: starts on load, stops at the finish */
 let hubEmoji=null; /* emoji that bursts from the hub on the post-win tap (custom puzzles carry their own) */
@@ -893,6 +893,67 @@ const DEFS={
   }
 };
 /* post-game easter egg: tap the hub to press it in and burst out emojis */
+/* ---------- Button Smasher + the Hank invasion (stolen with love from hankgreen.com) ---------- */
+let hubSmash=0, hankGame=null;
+function hubSmashed(){
+  hubSmash++;
+  if(hubSmash%20!==0) return;   /* every 20th post-game hub smash */
+  try{
+    if(!localStorage.getItem("x43_bsmash")){
+      localStorage.setItem("x43_bsmash",dailyKey||todayStr());
+      /* the history entry was written at game end — stamp the flag onto it */
+      if(dailyKey){
+        const h=JSON.parse(localStorage.getItem("x43_history")||"{}");
+        if(h[dailyKey]){ h[dailyKey].bs=1; localStorage.setItem("x43_history",JSON.stringify(h)); }
+      }
+      toast("BUTTON SMASHER 🔨",2600);
+    }
+  }catch(e){}
+  startHankGame();
+}
+function startHankGame(){
+  if(hankGame||reduceMotion()) return;
+  hankGame={sprites:[],clicks:0,anim:null};
+  for(let i=0;i<12;i++) spawnHank();
+  const tick=()=>{
+    if(!hankGame) return;
+    const vw=innerWidth, vh=innerHeight;
+    for(const s of hankGame.sprites){
+      s.x+=s.vx; s.y+=s.vy;
+      if(s.x<=0){s.x=0;s.vx=Math.abs(s.vx);} if(s.x>=vw-s.w){s.x=vw-s.w;s.vx=-Math.abs(s.vx);}
+      if(s.y<=0){s.y=0;s.vy=Math.abs(s.vy);} if(s.y>=vh-s.w){s.y=vh-s.w;s.vy=-Math.abs(s.vy);}
+      s.rot+=s.rs;
+      s.el.style.left=s.x+"px"; s.el.style.top=s.y+"px"; s.el.style.transform="rotate("+s.rot+"deg)";
+    }
+    hankGame.anim=requestAnimationFrame(tick);
+  };
+  hankGame.anim=requestAnimationFrame(tick);
+}
+function spawnHank(){
+  const img=document.createElement("img");
+  img.src="../hankhair.png"; img.className="hank-sprite"; img.alt="";
+  const w=60+Math.floor(Math.random()*80);
+  img.style.width=w+"px";
+  const dir=Math.random()*Math.PI*2, sp=0.35+Math.random()*0.55;
+  const s={el:img, w, x:Math.random()*Math.max(1,innerWidth-w), y:Math.random()*Math.max(1,innerHeight-w),
+    vx:Math.cos(dir)*sp, vy:Math.sin(dir)*sp, rot:Math.random()*360, rs:(Math.random()-0.5)*2.4};
+  img.style.left=s.x+"px"; img.style.top=s.y+"px";
+  img.addEventListener("click",e=>{ e.stopPropagation(); popHank(s); });
+  document.body.appendChild(img);
+  hankGame.sprites.push(s);
+}
+function popHank(s){
+  s.el.style.transition="transform .3s ease, opacity .3s ease";
+  s.el.style.transform="rotate("+s.rot+"deg) scale(0)"; s.el.style.opacity="0";
+  setTimeout(()=>s.el.remove(),300);
+  hankGame.sprites=hankGame.sprites.filter(x=>x!==s);
+  hankGame.clicks++;
+  if(hankGame.clicks%2===0&&hankGame.sprites.length) spawnHank();   /* they multiply, like on hankgreen.com */
+  if(!hankGame.sprites.length){
+    cancelAnimationFrame(hankGame.anim); hankGame=null;
+    toast("HANK DESTROYER 🏆",2600);
+  }
+}
 function hubPop(){
   if(reduceMotion()) return;
   const t=tiles[special]; if(!t) return;
@@ -914,7 +975,7 @@ function hubPop(){
   }
 }
 function tapWord(w){
-  if(over){ if(w===special) hubPop(); return; }   /* finished board: hub is an emoji button */
+  if(over){ if(w===special){ hubPop(); hubSmashed(); } return; }   /* finished board: hub is an emoji button */
   if(animating||locked.has(w)) return;
   const i=selection.indexOf(w);
   if(i>=0) selection.splice(i,1);
@@ -1096,6 +1157,35 @@ function renderMist(){
 function hubFirstAll(){ return guesses.length>0&&guesses.every(g=>g[0]===special); }
 function hubMiddleAll(){ return guesses.length>0&&guesses.every(g=>g[1]===special); }
 function hubLastAll(){ return guesses.length>0&&guesses.every(g=>g[2]===special); }
+/* Smusher: has this browser ever played SMUSH? (same origin, so its localStorage
+   is visible here — smush_hist gains a key per finished board, smush_save_* per start) */
+function triedSmush(){
+  try{
+    if(Object.keys(JSON.parse(localStorage.getItem("smush_hist")||"{}")).length) return true;
+    for(let i=0;i<localStorage.length;i++) if(String(localStorage.key(i)).startsWith("smush_save_")) return true;
+  }catch(e){}
+  return false;
+}
+/* the achievement pops once — on the first 4×3 win after they've tried SMUSH —
+   and stays pinned to that day so re-renders agree with the original tally */
+function smusherToday(){
+  if(!dailyKey||!triedSmush()) return false;
+  try{
+    let d=localStorage.getItem("x43_smusher");
+    if(!d){ d=dailyKey; localStorage.setItem("x43_smusher",d); }
+    return d===dailyKey;
+  }catch(e){ return false; }
+}
+/* Human: ever tapped a Humans-podcast ad (rotation banner or post-game card) */
+function humanToday(){
+  if(!dailyKey) return false;
+  try{
+    if(localStorage.getItem("x43_human")!=="1") return false;
+    let d=localStorage.getItem("x43_human_day");
+    if(!d){ d=dailyKey; localStorage.setItem("x43_human_day",d); }
+    return d===dailyKey;
+  }catch(e){ return false; }
+}
 function isPurpleFirst(){ return solvedIdx[0]===3; }
 function isBlueFirst(){ return solvedIdx[0]===0; }
 function orderIs(seq){ return solvedIdx.length===4&&seq.every((c,i)=>solvedIdx[i]===c); }
@@ -1124,14 +1214,16 @@ function calcScore(){
   let silverPlaque=allRewards&&solveMs!==null&&solveMs<120000&&!goldPlaque; /* perfect, 90–120s */
   let perfectBonus=allRewards?200-score:0;
   score+=perfectBonus;
+  const smusher=smusherToday();                       /* first finished game after trying SMUSH */
+  const human=humanToday();                           /* first finished game after tapping a Humans ad */
+  let bsmash=false; try{ bsmash=localStorage.getItem("x43_bsmash")===dailyKey; }catch(e){}
   const minClicks=won&&clicks>0&&clicks<=MIN_CLICKS;  /* 4 guesses × 3 tile taps, nothing wasted */
   const megaClicks=won&&clicks>=MEGA_CLICKS;          /* no points, just an achievement */
   if(minClicks) score+=CLICK_BONUS;                    /* added after the 200 top-up so it isn't absorbed */
   const streak=debugStreak||((won&&dailyKey===todayStr())?streakWithToday():0);  /* +1/day of streak — release-day plays only */
   score+=streak;
   const streakMile=STREAK_MILESTONES.includes(streak)?streak:0;   /* landed exactly on a milestone day */
-  const adBonus=(won&&adClicked)?AD_BONUS:0;       /* thanks for clicking the ad */
-  score+=adBonus;
+  /* (ad clicks are still tracked for stats, but no longer earn points) */
   if(ruleBreaker){ score=RULE_BREAKER_SCORE; allRewards=false; goldPlaque=false; silverPlaque=false; perfectBonus=0; } /* RULE BREAKER trumps everything */
   /* personal-best / above-average badges (0 points). Compared against this browser's
      OTHER dailies, excluding today's own entry, so they stay stable on re-render. */
@@ -1140,7 +1232,7 @@ function calcScore(){
   const prevAvg=past.length?past.reduce((a,b)=>a+b,0)/past.length:null;
   const topScore=won&&prevBest!==null&&score>prevBest;                 /* a new all-time high */
   const beatAvg=won&&prevAvg!==null&&score>prevAvg&&!topScore;          /* above your average (top score already implies it) */
-  return {won, perfect, hubFirst, hubMiddle, ruleBreaker, purpleFirst, blueFirst, revRainbow, rainbow, grellow, grue, godDamnit, dayBefore, fast, minClicks, megaClicks, allRewards, goldPlaque, silverPlaque, perfectBonus, streak, streakMile, adBonus, topScore, beatAvg, score};
+  return {won, perfect, hubFirst, hubMiddle, ruleBreaker, purpleFirst, blueFirst, revRainbow, rainbow, grellow, grue, godDamnit, dayBefore, fast, minClicks, megaClicks, smusher, human, bsmash, allRewards, goldPlaque, silverPlaque, perfectBonus, streak, streakMile, topScore, beatAvg, score};
 }
 
 /* ---------- end ---------- */
@@ -1256,7 +1348,6 @@ function tallyItems(cs){
   if(cs.minClicks) it.push(["🖱️","Efficient — the "+MIN_CLICKS+"-click minimum",CLICK_BONUS]);
   if(cs.streak>0) it.push(["🔥",cs.streak+"-day streak",cs.streak]);
   if(cs.streakMile) it.push(["✦","Streak of "+cs.streakMile+" — "+cs.streakMile+" days in a row!",0]);
-  if(cs.adBonus) it.push(["📣","Thanks for the tap",cs.adBonus]);
   if(cs.topScore) it.push(["🏆","Top Score — a new personal best!",0]);
   if(cs.beatAvg) it.push(["📈","Above Average — beat your average",0]);
   if(cs.perfect&&!cs.allRewards&&!cs.godDamnit) it.push(["✨","Perfect — no mistakes",0]);
@@ -1266,6 +1357,9 @@ function tallyItems(cs){
   if(cs.godDamnit) it.push(["😤","God Damnit! — perfect but for one swap",0]);
   if(cs.dayBefore) it.push(["🌙","The Day Before — played 12–1am",0]);
   if(cs.megaClicks) it.push(["🖲️","Click Happy — "+clicks+" clicks. Why?",0]);
+  if(cs.smusher) it.push(["🥞","Smusher — you've played SMUSH!",0]);
+  if(cs.human) it.push(["🎙️","Human — you checked out the podcast",0]);
+  if(cs.bsmash) it.push(["🔨","Button Smasher — the hub can take it",0]);
   if(cs.goldPlaque) it.push(["🥇","Gold Plaque — perfect, under 90s",0]);
   else if(cs.silverPlaque) it.push(["🥈","Silver Plaque — perfect, under 120s",0]);
   return it;
@@ -1479,6 +1573,7 @@ document.addEventListener("click",e=>{
   if(!(e.target.closest&&e.target.closest("#humansModal a"))) return;
   try{
     adClicked=true; adClickedId="humanspod"; saveGame();
+    localStorage.setItem("x43_human","1");
     if(window.x43beacon&&dailyKey&&over){
       const cs=calcScore(), ct=catTelemetry();
       x43beacon({p:dailyKey, rel:(dailyKey===todayStr())?1:0, w:cs.won?1:0,
@@ -2156,7 +2251,7 @@ function recordHistory(){
     h[dailyKey]={s:cs.score, m:mistakes, w:cs.won?1:0, ms:solveMs,
       hf:cs.hubFirst?1:0, hm:cs.hubMiddle?1:0, pf:cs.purpleFirst?1:0, bf:cs.blueFirst?1:0,
       rr:cs.revRainbow?1:0, rw:cs.rainbow?1:0, gr:cs.grellow?1:0, gu:cs.grue?1:0, gd:cs.godDamnit?1:0, db:cs.dayBefore?1:0,
-      fast:cs.fast?1:0, rb:cs.ruleBreaker?1:0, p:cs.perfect?1:0, ad:adClicked?1:0,
+      fast:cs.fast?1:0, rb:cs.ruleBreaker?1:0, p:cs.perfect?1:0, ad:adClicked?1:0, sm:cs.smusher?1:0, hu:cs.human?1:0,
       gold:cs.goldPlaque?1:0, silver:cs.silverPlaque?1:0,
       rel:rel,   /* counts toward the streak; preserved across archive replays */
       ts:Date.now()};
@@ -2202,11 +2297,12 @@ function recordHistory(){
     }
   }catch(e){}
 }
-/* tapping the ad grants +AD_BONUS for this game. If the game's already finished,
+/* tapping the ad is recorded for stats. If the game's already finished,
    re-tally the result quietly so the bonus shows without re-popping the modal. */
 function onAdClick(){
   if(adClicked) return;
   adClicked=true; adClickedId=window.x43ad||""; saveGame();
+  try{ if(/^humans/.test(adClickedId)) localStorage.setItem("x43_human","1"); }catch(e){}
   if(over){ recordHistory(); const cs=calcScore(); showResult(cs.won,cs.score,false,true); }
 }
 /* current consecutive-day streak from this browser's history (matches history.html) */
