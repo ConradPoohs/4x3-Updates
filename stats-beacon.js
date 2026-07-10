@@ -6,16 +6,31 @@
   "use strict";
   var EP = "https://fourbythree-stats.hankmt.workers.dev";
 
+  /* Unified cross-game anon id (shared with SMUSH via same-origin localStorage).
+   * 16 chars of [a-z0-9]. First adoption migrates any rows written under the
+   * legacy per-game key (x43_anon) via a one-time fire-and-forget POST /remap. */
+  function mkId() {
+    var s = (Math.random().toString(36).slice(2, 10) +
+             Math.random().toString(36).slice(2, 10) + "0000000000000000");
+    return s.replace(/[^a-z0-9]/g, "0").slice(0, 16);
+  }
   function anon() {
     try {
-      var k = localStorage.getItem("x43_anon");
-      if (!k) {
-        k = (window.crypto && crypto.randomUUID)
-          ? crypto.randomUUID()
-          : (Date.now().toString(36) + Math.random().toString(36).slice(2));
-        localStorage.setItem("x43_anon", k);
+      var hg = localStorage.getItem("hg_anon");
+      var legacy = localStorage.getItem("x43_anon");
+      if (!hg) {
+        hg = mkId();
+        localStorage.setItem("hg_anon", hg);
       }
-      return k;
+      /* remap the legacy 4×3 id once — whether hg_anon was just created here or
+         earlier by the other game — as long as the legacy id differs and we
+         haven't already remapped it. */
+      if (legacy && legacy !== hg && !localStorage.getItem("hg_remapped_x43")) {
+        send("/remap", { old: legacy, new: hg });
+        localStorage.setItem("x43_anon", hg);   // stop anything else regenerating it
+        localStorage.setItem("hg_remapped_x43", "1");
+      }
+      return hg;
     } catch (e) { return ""; }
   }
   function dev() {
