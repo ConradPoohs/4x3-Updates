@@ -77,6 +77,13 @@
     send("/s", { id: id, p: p });
   };
 
+  /* Humans post-game card: v:1 = the card slid into view, c:1 = a listen link
+   * was tapped. One row per browser per puzzle, upserted server-side. */
+  window.x43hp = function (p, ev) {
+    var id = anon(); if (!id || !p) return;
+    send("/hp", { id: id, p: p, v: ev === "v" ? 1 : 0, c: ev === "c" ? 1 : 0 });
+  };
+
   /* Public per-puzzle community stats (aggregate only; server caches ~5 min).
    * Resolves to the parsed JSON, or rejects — caller decides how to fail soft. */
   window.x43stats = function (p) {

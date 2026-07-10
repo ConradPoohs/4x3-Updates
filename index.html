@@ -1544,13 +1544,15 @@ function armHumansPromo(){
   const hp=document.getElementById("humansPromo");
   if(!hp||hp.style.display==="") return;
   hp.style.display="";
+  /* a real impression = the card actually entered the viewport */
+  const seen=()=>{ hp.classList.add("in"); try{ if(window.x43hp&&dailyKey) x43hp(dailyKey,"v"); }catch(e){} };
   /* the card is collapsed to zero height, so watch the STATS panel: when the
      player scrolls down to it, the card zooms in from the side and shoves the
      stats down to make room (instant under reduced motion) */
   const cs=document.getElementById("commStats");
-  if(reduceMotion()||!("IntersectionObserver" in window)||!cs){ hp.classList.add("in"); return; }
+  if(reduceMotion()||!("IntersectionObserver" in window)||!cs){ seen(); return; }
   const io=new IntersectionObserver(es=>{
-    if(es.some(e=>e.isIntersecting)){ setTimeout(()=>hp.classList.add("in"),350); io.disconnect(); }
+    if(es.some(e=>e.isIntersecting)){ setTimeout(seen,350); io.disconnect(); }
   },{threshold:0.2});
   io.observe(cs);
 }
@@ -1567,19 +1569,13 @@ function closeHumans(){ document.getElementById("humansModal").style.display="no
 document.addEventListener("keydown",e=>{
   if(e.key==="Escape"&&document.getElementById("humansModal").style.display==="flex") closeHumans();
 });
-/* a tap on any listen link counts as an ad click on the finished game — the /e
-   upsert takes the re-send in stride, so the ads dashboard sees "humanspod" */
+/* a tap on any listen link → its own click event (NOT the plays-row adid slot,
+   which belongs to the rotation banner that was on screen during the game) */
 document.addEventListener("click",e=>{
   if(!(e.target.closest&&e.target.closest("#humansModal a"))) return;
   try{
-    adClicked=true; adClickedId="humanspod"; saveGame();
-    localStorage.setItem("x43_human","1");
-    if(window.x43beacon&&dailyKey&&over){
-      const cs=calcScore(), ct=catTelemetry();
-      x43beacon({p:dailyKey, rel:(dailyKey===todayStr())?1:0, w:cs.won?1:0,
-        m:mistakes, s:cs.score, ms:solveMs, st:streakWithToday(), ad:1,
-        adid:"humanspod", c:ct.c, so:ct.so});
-    }
+    localStorage.setItem("x43_human","1");   /* feeds the Human achievement */
+    if(window.x43hp&&dailyKey) x43hp(dailyKey,"c");
   }catch(err){}
 });
 let modalLastFocus=null;
