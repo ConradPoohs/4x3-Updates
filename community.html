@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4 × 3 — Community puzzles</title>
+<script>(function(){var p=location.pathname;if(!/\/$/.test(p)){if(/\.[^\/]+$/.test(p))p=p.replace(/[^\/]*$/,"");else p+="/";}var b=document.createElement("base");b.setAttribute("href",p);document.head.appendChild(b);})();</script>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="shared.css">
+<script src="shared.js"></script>
+<script defer src="/_vercel/insights/script.js"></script>
+<style>
+  .cpx{display:flex;align-items:center;gap:10px;border:1.5px solid var(--line);border-radius:10px;padding:9px 12px;margin:8px 0}
+  .cpx .cpmeta{flex:1;min-width:0}
+  .cpx .cptitle{font-weight:700;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cpx .cpby{font-size:12px;color:var(--mut);margin-top:2px}
+  .cpx .cprate{text-align:right;font-size:13px;color:var(--mut);white-space:nowrap}
+  .cpx .cprate .cpstars{color:#b8860b;font-weight:700}
+  .cptoggle{display:flex;gap:8px;margin:4px 0 12px}
+  .cptoggle .hbtn{padding:6px 16px}
+  .cptoggle .hbtn.on{background:var(--ink);color:var(--paper)}
+  .cpmod{font-size:12px}
+  .cpmod .cpwords{color:var(--mut);margin:4px 0;word-break:break-word}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a href="index.html" style="display:block"><img class="logo" src="fourbythreelogo.png" alt="4 × 3"></a>
+    <div class="tag">Puzzles by players.</div>
+  </header>
+  <div class="card">
+    <b>Community puzzles</b>
+    <div class="hint">Puzzles by players, for players. <a href="build.html">Make your own.</a></div>
+    <div class="cptoggle">
+      <button class="hbtn on" id="tgTop" onclick="setSort('top')">Top</button>
+      <button class="hbtn" id="tgNew" onclick="setSort('new')">New</button>
+    </div>
+    <div id="cpList"></div>
+  </div>
+  <div id="modCard"></div>
+  <footer>
+    <a href="index.html">← back to the game</a> · <a href="scoring.html">scoring</a> · <a href="archive.html">past puzzles</a> · <a href="build.html">build your own</a> · <a href="history.html">history</a> · <a href="https://hankgreen.com/smush">SMUSH</a>
+  </footer>
+</div>
+<script>
+"use strict";
+const API="https://fourbythree-stats.hankmt.workers.dev";
+let sort="top";
+function fmtTs(ts){ try{ return new Date(ts).toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"}); }catch(e){ return ""; } }
+function setSort(s){
+  sort=s;
+  document.getElementById("tgTop").classList.toggle("on",s==="top");
+  document.getElementById("tgNew").classList.toggle("on",s==="new");
+  loadList();
+}
+async function loadList(){
+  const el=document.getElementById("cpList");
+  el.innerHTML="<div class='hint'>Loading…</div>";
+  try{
+    const r=await fetch(API+"/cpl?sort="+sort);
+    const j=await r.json();
+    if(!r.ok||!j||!j.ok||!Array.isArray(j.puzzles)) throw new Error("bad");
+    if(!j.puzzles.length){ el.innerHTML="<div class='hint'>Nothing here yet — be the first.</div>"; return; }
+    if(sort==="top"){
+      /* exploration ranking, computed fresh per visitor: a Bayesian-smoothed
+         rating (K imaginary ratings at the site average, so two 5★ votes can't
+         outrank fifty 4.6★ votes) plus random jitter. Great boards still float
+         near the top for most people, but lightly-reviewed ones get real
+         airtime with a slice of the audience instead of everyone playing the
+         same #1 forever. */
+      const K=5, PRIOR=3.5;
+      j.puzzles.forEach(p=>{
+        const nr=p.nr||0, ar=(p.ar!=null)?p.ar:PRIOR;
+        p._sc=(ar*nr+PRIOR*K)/(nr+K)+(Math.random()*1.3-0.65);
+      });
+      j.puzzles.sort((a,b)=>b._sc-a._sc);
+    }
+    el.innerHTML=j.puzzles.map(p=>{
+      const rating=(p.ar!=null)?("<span class='cpstars'>★ "+esc(String(p.ar))+"</span> ("+esc(String(p.nr||0))+")"):"—";
+      const by=(p.author?("by "+esc(p.author)+" · "):"")+esc(fmtTs(p.ts));
+      return "<div class='cpx'>"+
+        "<div class='cpmeta'>"+
+          "<div class='cptitle'>"+esc(p.title||"")+"</div>"+
+          "<div class='cpby'>"+by+"</div>"+
+        "</div>"+
+        "<div class='cprate'>"+rating+"<br>"+esc(String(p.plays||0))+" plays</div>"+
+        "<a class='hbtn' href='index.html#c="+encodeURIComponent(p.bid)+"'>Play</a>"+
+      "</div>";
+    }).join("");
+  }catch(e){
+    el.innerHTML="<div class='hint'>Couldn't load puzzles right now — try again later.</div>";
+  }
+}
+/* ---------- moderation (only with a dash key) ---------- */
+function modKey(){ try{ return localStorage.getItem("x43_dashkey")||""; }catch(e){ return ""; } }
+function puzzleWords(enc){
+  try{
+    const p=decPuzzle(enc);
+    const w=[p.s];
+    p.c.forEach(c=>{ w.push(c[1]); w.push(c[2]); });
+    return w.join(", ");
+  }catch(e){ return "(couldn't decode)"; }
+}
+async function loadMod(){
+  const key=modKey(); if(!key) return;
+  let j;
+  try{
+    const r=await fetch(API+"/cpadm?key="+encodeURIComponent(key));
+    if(!r.ok) return;
+    j=await r.json();
+    if(!j||!j.ok||!Array.isArray(j.puzzles)) return;
+  }catch(e){ return; }
+  const rows=j.puzzles.map(p=>
+    "<div class='cpx cpmod' style='display:block'>"+
+      "<div><b>"+esc(p.title||"")+"</b>"+(p.author?" · "+esc(p.author):"")+
+        " — reports: "+esc(String(p.reports||0))+(p.hidden?" · <b>hidden</b>":"")+"</div>"+
+      "<div class='cpwords'>"+esc(puzzleWords(p.enc))+"</div>"+
+      "<div class='rowbtns' style='justify-content:flex-start;margin-top:4px'>"+
+        "<button class='hbtn' style='padding:4px 12px' onclick=\"modAct('"+esc(p.bid)+"','hide')\">Hide</button>"+
+        "<button class='hbtn' style='padding:4px 12px' onclick=\"modAct('"+esc(p.bid)+"','show')\">Show</button>"+
+        "<button class='hbtn' style='padding:4px 12px' onclick=\"modAct('"+esc(p.bid)+"','del')\">Delete</button>"+
+      "</div>"+
+    "</div>"
+  ).join("");
+  document.getElementById("modCard").innerHTML=
+    "<div class='card'><b>Moderation</b>"+
+    (rows||"<div class='hint'>No reported or hidden puzzles.</div>")+"</div>";
+}
+async function modAct(bid,act){
+  const key=modKey(); if(!key) return;
+  try{
+    await fetch(API+"/cpadm",{method:"POST",headers:{"Content-Type":"text/plain"},
+      body:JSON.stringify({key:key,b:bid,act:act})});
+  }catch(e){}
+  loadMod(); loadList();
+}
+loadList();
+loadMod();
+</script>
+</body>
+</html>
