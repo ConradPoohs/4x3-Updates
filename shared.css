@@ -146,7 +146,28 @@
   .scat span{font-size:13.5px; color:var(--ink); letter-spacing:.3px; white-space:nowrap;}
   .scat .hub{color:#b8860b; font-weight:700;}
   /* result modal */
-  #modal{position:fixed; inset:0; z-index:100; display:none; align-items:center; justify-content:center;}
+  #modal, #humansModal{position:fixed; inset:0; z-index:100; display:none; align-items:center; justify-content:center;}
+  /* Humans podcast promo — slides in between the board and the community stats */
+  .humans-promo{border:1.5px solid var(--line); background:var(--card); border-radius:14px;
+    padding:14px 16px; margin-bottom:14px; cursor:pointer;
+    opacity:0; transform:translateY(22px); transition:opacity .55s ease, transform .55s ease;}
+  .humans-promo.in{opacity:1; transform:none;}
+  html.a11y-rm .humans-promo{transition:none;}
+  .humans-promo .promo-kicker{font-size:11px; font-weight:800; letter-spacing:.8px; text-transform:uppercase; color:#d4a017;}
+  .humans-promo p{margin:6px 0 0; font-size:13.5px; line-height:1.5; color:var(--ink);}
+  .humans-promo b{white-space:nowrap;}
+  .humans-promo .hp-cta{display:inline-block; margin-top:9px; font-size:12px; font-weight:700;
+    letter-spacing:.06em; text-transform:uppercase; color:var(--ink);
+    border:1.5px solid var(--ink); border-radius:999px; padding:5px 14px;}
+  .humans-promo:hover .hp-cta{background:var(--ink); color:var(--paper);}
+  /* the "listen on" sheet, 4×3-skinned */
+  .hm-title{font-size:20px; font-weight:800; text-align:center; margin:6px 8px 2px; color:var(--ink);}
+  .hm-kicker{text-align:center; font-size:12px; font-weight:800; letter-spacing:.35em;
+    text-transform:uppercase; color:#d4a017; margin:10px 0 14px;}
+  .hm-pill{display:block; text-align:center; margin:9px 4px; padding:11px 12px;
+    border:2px solid var(--ink); border-radius:999px; text-decoration:none;
+    font-size:14px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--ink);}
+  .hm-pill:hover{background:var(--ink); color:var(--paper);}
   .mback{position:absolute; inset:0; background:rgba(43,38,32,.45);}
   .mcard{position:relative; background:var(--card); border-radius:18px; padding:22px 18px 18px;
     width:88%; max-width:380px; max-height:86vh; overflow:auto;

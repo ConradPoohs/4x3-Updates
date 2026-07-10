@@ -107,6 +107,15 @@
       </div>
       <div id="result" style="display:none" class="result"></div>
     </div>
+    <div id="humansPromo" class="humans-promo" style="display:none" role="button" tabindex="0"
+         aria-label="Listen to the Humans podcast" onclick="openHumans()"
+         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openHumans();}">
+      <div class="promo-kicker">From Hank</div>
+      <p>Hey! I have to say, of all the stuff I'm working on right now, the thing I'm most proud
+      of is my new podcast, <b>“Humans.”</b> I really hope you'll give it a listen. The recent episode
+      with Jad Abumrad (the creator of Radiolab) got rave reviews!</p>
+      <span class="hp-cta">Listen</span>
+    </div>
     <div id="commStats" style="display:none" class="card cstats" aria-label="How everyone did"></div>
     <div id="fbCard" style="display:none" class="card fb">
       <b>🧪 Beta feedback for the creator</b>
@@ -857,6 +866,12 @@ const DEFS={
     "Sticky Binders":{GLUE:"Any of a number of liquids that dry to bind things.",PASTE:"The gloopy adhesive that comes in a jar.",TAPE:"The sticky strip pulled off a roll."},
     "Metaphorical Red Things":{HERRING:"A red herring is a misleading clue that throws you off the trail.",FLAG:"A red flag is a warning sign that something is wrong.",TAPE:"Red tape is maddening bureaucratic paperwork."},
     "Scotch ___":{EGG:"A hard-boiled egg wrapped in sausage and fried.",WHISKY:"The smoky spirit distilled in Scotland.",TAPE:"The see-through desk roll from 3M."}
+  },
+  TEA:{
+    "Caffeine Sources":{COKE:"The fizzy cola with a caffeine kick.",LATTE:"Espresso softened with steamed milk.",TEA:"Steeped leaves in hot water."},
+    "Juicy Gossip":{DIRT:"The unflattering secrets you dig up on someone.",SCOOP:"An exclusive bit of breaking news.",TEA:"The hot goss you spill."},
+    "Sounds Like a Letter":{CUE:"A long stick for striking billiard balls.",PEA:"A small round green vegetable.",TEA:"The hot drink."},
+    "___ Party":{BLOCK:"A neighborhood street bash with the road closed off.",POLITICAL:"An organized group vying for elected office.",TEA:"A dainty afternoon gathering of cups and saucers (or a certain 1773 protest in Boston)."}
   }
 };
 /* post-game easter egg: tap the hub to press it in and burst out emojis */
