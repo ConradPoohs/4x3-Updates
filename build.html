@@ -51,10 +51,22 @@
       <label style="margin-top:14px">🔗 Direct link (works even if it's not the daily)</label>
       <div class="linkbox" id="pubLink"></div>
       <button class="hbtn" style="padding:6px 14px" onclick="copyText(pubLinkURL,this)">Copy link</button>
+      <div id="pubForm" style="margin-top:18px;border-top:1px solid var(--line,#e6e0d6);padding-top:14px">
+        <b>🌍 Make it public</b>
+        <div class="hint">Add it to the <a href="community.html">community puzzles</a> page for everyone to play and rate.</div>
+        <label>Puzzle name</label>
+        <input id="cTitle" placeholder="Name your puzzle (no spoilers!)" maxlength="60">
+        <label>Your name (optional)</label>
+        <input id="cAuthor" placeholder="optional" maxlength="40">
+        <div class="rowbtns" style="justify-content:flex-start;margin-top:8px">
+          <button class="hbtn primary" id="cPublish" onclick="publishCommunity(this)">Publish it</button>
+        </div>
+        <div id="cResult" style="display:none;margin-top:10px"></div>
+      </div>
     </div>
   </div>
   <footer>
-    <a href="index.html">← back to the game</a> · <a href="scoring.html">scoring</a> · <a href="archive.html">past puzzles</a> · <a href="history.html">history</a> · <a href="https://hankgreen.com/smush">SMUSH</a>
+    <a href="index.html">← back to the game</a> · <a href="scoring.html">scoring</a> · <a href="archive.html">past puzzles</a> · <a href="history.html">history</a> · <a href="community.html">community puzzles</a> · <a href="https://hankgreen.com/smush">SMUSH</a>
   </footer>
 </div>
 <script>
@@ -129,6 +141,51 @@ function makeLinks(){
   document.getElementById("pubLink").textContent=pubLinkURL;
   document.getElementById("dailyLine").textContent=dailyEntryLine;
   document.getElementById("linkOut").style.display="";
+  /* reset the publish form each time links are (re)generated */
+  const pf=document.getElementById("pubForm"); if(pf) pf.style.display="";
+  const cr=document.getElementById("cResult"); if(cr){ cr.style.display="none"; cr.innerHTML=""; }
+  try{ const an=document.getElementById("cAuthor"); if(an&&!an.value) an.value=localStorage.getItem("x43_name")||val("bAuthor")||""; }catch(e){}
+}
+function hgAnon(){ try{ return localStorage.getItem("hg_anon")||""; }catch(e){ return ""; } }
+async function publishCommunity(btn){
+  const enc=dailyEnc; /* same encoded payload as pubLinkURL */
+  if(!enc){ return; }
+  const title=document.getElementById("cTitle").value.trim();
+  const author=document.getElementById("cAuthor").value.trim();
+  const res=document.getElementById("cResult");
+  if(title.length<1||title.length>60){
+    res.style.display=""; res.innerHTML="<div class='vmsg err'>✗ "+esc("Give it a name (1–60 characters).")+"</div>"; return;
+  }
+  try{ if(author) localStorage.setItem("x43_name",author); }catch(e){}
+  btn.disabled=true; const orig=btn.textContent; btn.textContent="Publishing…";
+  try{
+    const r=await fetch("https://fourbythree-stats.hankmt.workers.dev/cp",{
+      method:"POST", headers:{"Content-Type":"text/plain"},
+      body:JSON.stringify({id:hgAnon(), enc:enc, title:title, author:author})
+    });
+    const j=await r.json();
+    if(r.ok&&j&&j.ok){
+      const url=gameURL("#c="+j.bid).replace(/^https?:\/\/[^/]+/,"https://www.4x3.fun");
+      document.getElementById("pubForm").innerHTML=
+        "<b>🎉 It's live!</b>"+
+        "<div class='hint'>Anyone can play and rate it now.</div>"+
+        "<label>Share this link</label>"+
+        "<div class='linkbox' id='cLive'></div>"+
+        "<button class='hbtn' style='padding:6px 14px' onclick=\"copyText(document.getElementById('cLive').textContent,this)\">Copy link</button>"+
+        "<div class='hint' style='margin-top:8px'>See it on the <a href='community.html'>community puzzles</a> page.</div>";
+      document.getElementById("cLive").textContent=url;
+      return;
+    }
+    res.style.display="";
+    if(j&&j.error==="limit"){
+      res.innerHTML="<div class='vmsg err'>✗ "+esc("You've published 5 puzzles today — try tomorrow.")+"</div>";
+    } else {
+      res.innerHTML="<div class='vmsg err'>✗ "+esc("Sorry — couldn't publish that. Please try again.")+"</div>";
+    }
+  }catch(e){
+    res.style.display=""; res.innerHTML="<div class='vmsg err'>✗ "+esc("Sorry — couldn't publish that. Please try again.")+"</div>";
+  }
+  btn.disabled=false; btn.textContent=orig;
 }
 async function downloadPuzzlesJson(btn){
   if(!dailyDate) return;

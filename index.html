@@ -139,10 +139,15 @@
         <a id="fbMail" class="hbtn" style="display:none;text-decoration:none">Email it</a>
       </div>
     </div>
+    <div id="crate" style="display:none" class="card fb">
+      <b id="crateTitle">Rate this puzzle</b>
+      <div class="stars" id="crateStars" style="margin-top:10px"></div>
+      <a id="crateReport" href="#" style="display:inline-block;margin-top:8px;font-size:13px;color:var(--mut)" onclick="reportCommunity();return false">Report this puzzle</a>
+    </div>
   </div>
 
 
-  <footer>by Hank Green <img src="fishtrans.png" alt="" style="height:20px;vertical-align:-5px;opacity:.4"> · <a href="scoring.html">scoring</a> · <a href="archive.html">past puzzles</a> · <a href="build.html">build your own</a> · <a href="history.html">history</a> · <a href="https://hankgreen.com/smush">new: SMUSH</a></footer>
+  <footer>by Hank Green <img src="fishtrans.png" alt="" style="height:20px;vertical-align:-5px;opacity:.4"> · <a href="scoring.html">scoring</a> · <a href="archive.html">past puzzles</a> · <a href="build.html">build your own</a> · <a href="history.html">history</a> · <a href="community.html">community puzzles</a> · <a href="https://hankgreen.com/smush">new: SMUSH</a></footer>
 </div>
 <div id="modal">
   <div class="mback" onclick="closeModal()"></div>
@@ -198,6 +203,8 @@ const G=window.gsap||null;
 let puzzle=null, isBeta=false, dailyKey=null;
 let betaId="";   /* keys beta feedback rows server-side: hash of a #b= payload, or "d"+date for #t= links */
 let betaDate=null; /* the scheduled date a #t= test link points at (shown in the date pill) */
+let communityId="",communityTitle="",communityAuthor=""; /* set when a #c=<bid> community puzzle is loaded */
+let cRated=0, crateDone=false; /* community rating: chosen stars, and whether a report was sent */
 let loadedDay=null, pendingKey=null, isPreview=false;
 let puzzleData=null; /* last good puzzles.json, reused by the archive */
 let cats=[], special="", slots=[], slots0=[], tiles={};
@@ -244,15 +251,30 @@ function betaHash(s){
 async function init(){
   const h=location.hash;
   isBeta=false; puzzle=null; dailyKey=null; betaId=""; betaDate=null;
+  communityId=""; communityTitle=""; communityAuthor="";
   loadedDay=todayStr(); pendingKey=null; isPreview=false;
   scheduleRollover();
-  let archiveDate=null, testDate=null;
+  let archiveDate=null, testDate=null, communityBid=null;
   try{
     if(h.startsWith("#b=")){ puzzle=decPuzzle(h.slice(3)); isBeta=true; betaId=betaHash(h.slice(3)); }
     else if(h.startsWith("#p=")){ puzzle=decPuzzle(h.slice(3)); }
     else if(h.startsWith("#d=")){ archiveDate=decodeURIComponent(h.slice(3)); }
     else if(h.startsWith("#t=")){ testDate=decodeURIComponent(h.slice(3)); } /* beta-test an already-scheduled puzzle */
+    else if(h.startsWith("#c=")){ const bid=decodeURIComponent(h.slice(3)); if(/^[a-z0-9]{6,20}$/.test(bid)) communityBid=bid; } /* community puzzle */
   }catch(e){ toast("Couldn't read that puzzle link — showing today's game."); }
+  if(!puzzle&&communityBid){
+    /* community puzzle: fetch its enc from the stats worker, then play it with
+       NO dailyKey (never touches streaks/history). Any failure falls through
+       to the daily below. */
+    try{
+      const r=await fetch("https://fourbythree-stats.hankmt.workers.dev/cpg?b="+communityBid);
+      const j=await r.json();
+      if(r.ok&&j&&j.ok){
+        puzzle=decPuzzle(j.enc);
+        communityId=communityBid; communityTitle=j.title||""; communityAuthor=j.author||"";
+      } else { toast("Couldn't load that puzzle — showing today's game."); }
+    }catch(e){ toast("Couldn't load that puzzle — showing today's game."); }
+  }
   if(!puzzle){
     /* no link (or an #d= archive / #t= test date): load from puzzles.json — that
        specific day if given and valid, otherwise the most recent entry ≤ today */
@@ -291,6 +313,7 @@ function setupPlay(){
   let sub="";
   if(dailyKey&&dailyKey!==todayStr()) sub=fmtDate(dailyKey);
   else if(isBeta&&betaDate) sub="Testing the puzzle for "+fmtDate(betaDate);
+  else if(communityId) sub=communityTitle+(communityAuthor?" · by "+communityAuthor:"");
   const ps=document.getElementById("pSub");
   ps.textContent=sub;
   ps.classList.remove("today");
@@ -313,28 +336,39 @@ function scheduleRollover(){
   clearTimeout(rolloverTimer);
   rolloverTimer=setTimeout(checkNewDay,Math.min(msUntilMidnight(),2147483647));
 }
+let rolloverRetry=null, rolloverTries=0;
 async function checkNewDay(){
   scheduleRollover();
-  if(location.hash.startsWith("#b=")||location.hash.startsWith("#p=")||location.hash.startsWith("#d=")||location.hash.startsWith("#t=")) return; /* linked, archived, or test puzzle, not the daily */
+  if(location.hash.startsWith("#b=")||location.hash.startsWith("#p=")||location.hash.startsWith("#d=")||location.hash.startsWith("#t=")||location.hash.startsWith("#c=")) return; /* linked, archived, test, or community puzzle, not the daily */
   if(isPreview&&!over) return;                 /* don't stomp on a builder test run */
   if(todayStr()===loadedDay) return;           /* same day, nothing to do */
-  loadedDay=todayStr();
+  clearTimeout(rolloverRetry);                 /* focus/visibility can re-enter; never stack retries */
   try{
     const r=await fetch(pjURL(),{cache:"no-store"});
-    if(!r.ok) return;
-    const data=await r.json();
-    puzzleData=data;
-    const keys=Object.keys(data).filter(k=>k<=todayStr()).sort();
-    const k=keys.length?keys[keys.length-1]:null;
-    if(!k||k===dailyKey) return;               /* no new puzzle for today */
-    if(!over&&guesses.length>0){               /* mid-game: don't reset the board */
-      pendingKey=k;
-      toast("A new puzzle is ready — it'll be here when you finish.");
-      return;
+    if(r.ok){
+      const data=await r.json();
+      puzzleData=data;
+      const keys=Object.keys(data).filter(k=>k<=todayStr()).sort();
+      const k=keys.length?keys[keys.length-1]:null;
+      if(k&&k!==dailyKey){
+        /* success: only NOW does the day tick over — a failed or premature fetch
+           must leave loadedDay stale so later attempts keep trying */
+        loadedDay=todayStr(); rolloverTries=0;
+        if(!over&&guesses.length>0){           /* mid-game: don't reset the board */
+          pendingKey=k;
+          toast("A new puzzle is ready — it'll be here when you finish.");
+          return;
+        }
+        if(document.getElementById("modal").style.display==="flex") closeModal();
+        init();
+        return;
+      }
+      /* fetched fine but today's puzzle isn't there yet (deploy lag) — retry below */
     }
-    if(document.getElementById("modal").style.display==="flex") closeModal();
-    init();
   }catch(e){}
+  /* bounded retry: every 45s for the first hour, then hourly */
+  rolloverTries++;
+  rolloverRetry=setTimeout(checkNewDay, rolloverTries<80?45000:3600000);
 }
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden) checkNewDay(); });
 window.addEventListener("focus",()=>checkNewDay());
@@ -358,7 +392,7 @@ function loadGame(){
 }
 function saveGame(){
   const k=gameKey(); if(!k) return;
-  try{ localStorage.setItem(k,JSON.stringify({v:1,s:special,slots0,solved:solvedIdx,m:mistakes,p:penalty,g:guesses,over,t0:startTime,sms:solveMs,ad:adClicked?1:0,adi:adClickedId,ck:clicks})); }catch(e){}
+  try{ localStorage.setItem(k,JSON.stringify({v:1,s:special,slots0,slots,sel:selection,solved:solvedIdx,m:mistakes,p:penalty,g:guesses,over,t0:startTime,sms:solveMs,ad:adClicked?1:0,adi:adClickedId,ck:clicks})); }catch(e){}
 }
 /* Rebuild the board state from a saved game, no animations, without
    re-counting stats (those were tallied once, on the real finish). */
@@ -432,7 +466,14 @@ function startGame(){
   const resuming=saved&&saved.s===special&&Array.isArray(saved.slots0)&&saved.slots0.length===9
     &&saved.slots0.slice().sort().join("\u0001")===expected;
   if(resuming) slots=saved.slots0.slice();
-  slots0=slots.slice();
+  /* newer saves also carry the CURRENT arrangement (post-shuffle) — use it when
+     it holds exactly the same nine words; old saves just fall back to slots0 */
+  if(resuming&&Array.isArray(saved.slots)&&saved.slots.length===9
+     &&saved.slots.every(w=>typeof w==="string")
+     &&saved.slots.slice().sort().join("")===expected){
+    slots=saved.slots.slice();
+    slots0=saved.slots0.slice();
+  } else slots0=slots.slice();
   if(hubSpinTween){ hubSpinTween.kill(); hubSpinTween=null; }
   hubFx.forEach(tw=>tw.kill()); hubFx=[];
   selection=[]; solvedIdx=[]; colorCat={}; locked=new Set();
@@ -443,6 +484,7 @@ function startGame(){
   document.getElementById("boardWrap").style.display="";
   document.getElementById("result").style.display="none";
   document.getElementById("fbCard").style.display="none";
+  { const cr=document.getElementById("crate"); cr.style.display="none"; crateDone=false; cRated=0; const t=document.getElementById("crateTitle"); if(t) t.textContent="Rate this puzzle"; const rl=document.getElementById("crateReport"); if(rl) rl.textContent="Report this puzzle"; }
   const cse=document.getElementById("commStats"); cse.style.display="none"; cse.innerHTML=""; commStatsShown=false;
   const hp=document.getElementById("humansPromo"); hp.style.display="none"; hp.classList.remove("in");
   document.getElementById("solvedList").innerHTML="";
@@ -454,7 +496,14 @@ function startGame(){
   const smb=document.getElementById("submitBtn");
   smb.textContent="Submit"; smb.onclick=()=>submitGuess(); smb.disabled=true;
   buildTiles();
-  if(resuming){ restoreGame(saved); }
+  if(resuming){
+    restoreGame(saved);
+    /* live selection survives a reload too — validated against the restored board */
+    if(!over&&Array.isArray(saved.sel)){
+      selection=saved.sel.filter(w=>typeof w==="string"&&tiles[w]&&!locked.has(w)).slice(0,3);
+      if(selection.length){ paintTiles(); updateButtons(); }
+    }
+  }
   else { if(firstLoad&&G) introDeal(); else layout(true); renderMist(); updateButtons(); }
   firstLoad=false;
 }
@@ -993,7 +1042,7 @@ function tapWord(w){
   paintTiles(); updateButtons();
   saveGame();   /* keep the click count honest across a mid-game refresh */
 }
-function deselectAll(){ if(animating) return; selection=[]; paintTiles(); updateButtons(); }
+function deselectAll(){ if(animating) return; selection=[]; paintTiles(); updateButtons(); saveGame(); }
 /* Shuffle: re-randomize only the still-in-play tiles among the slots they occupy.
    Solved/coloured groups and the centred hub stay put. */
 function shuffleBoard(){
@@ -1012,6 +1061,7 @@ function shuffleBoard(){
   do{ for(let k=words.length-1;k>0;k--){const j=Math.floor(Math.random()*(k+1));[words[k],words[j]]=[words[j],words[k]];} }
   while(++tries<6&&words.every((w,k)=>w===orig[k])); /* avoid a no-op shuffle */
   idxs.forEach((i,k)=>{ slots[i]=words[k]; });
+  saveGame();          /* the new arrangement survives a reload */
   suppressFlip=true;   /* a shuffle shouldn't trigger a card flip */
   layout(false);
   suppressFlip=false;
@@ -1085,6 +1135,12 @@ function solveAnim(ci,sel){
 function wrongAnim(sel,oneAway){
   mistakes++;
   penalty+=(solvedIdx.length>=2?MISS_LATE:MISS); /* a slip with two categories left stings more */
+  /* commit the mistake BEFORE the animation — a quick refresh must not undo it.
+     On the fatal third, mark the game over in the save too, so a reload during
+     the shake restores a finished loss instead of a resurrectable board. */
+  selection=[];
+  if(mistakes>=MAXM) over=true;
+  saveGame();
   toast(oneAway?"One away!":"Nope.");
   if(G){
     animating=true; updateButtons();
@@ -1483,6 +1539,7 @@ function showResult(won,score,fancy,quiet){
   const r=document.getElementById("result");
   r.style.display="none"; r.innerHTML="";
   if(isBeta){ document.getElementById("fbCard").style.display=""; initFb(); }
+  if(communityId){ document.getElementById("crate").style.display=""; initCrate(); }
   if(!quiet) openModal(fancy);
   else if(dailyKey) showCommStats();   /* restored finished game: no modal, stats straight away */
   if(won){ if(quiet) renderTallyStatic(score); else runModalTally(score); }
@@ -2171,6 +2228,43 @@ function starPaint(){
 }
 function ynPaint(){
   document.querySelectorAll("#fbSpecial button").forEach(b=>b.classList.toggle("on",b.textContent===fb.special));
+}
+/* ---------- community puzzle rating ---------- */
+function hgAnon(){ try{ return localStorage.getItem("hg_anon")||""; }catch(e){ return ""; } }
+function initCrate(){
+  const el=document.getElementById("crateStars"); el.innerHTML="";
+  for(let i=1;i<=5;i++){
+    const b=document.createElement("button"); b.textContent="⭐";
+    b.onclick=()=>rateCommunity(i);
+    el.appendChild(b);
+  }
+  cratePaint();
+}
+function cratePaint(){
+  document.querySelectorAll("#crateStars button").forEach((b,i)=>b.classList.toggle("on",i<cRated));
+}
+function rateCommunity(stars){
+  cRated=stars; cratePaint();
+  const anon=hgAnon();
+  if(anon&&communityId){
+    try{ fetch("https://fourbythree-stats.hankmt.workers.dev/cpr",{
+      method:"POST", keepalive:true, headers:{"Content-Type":"text/plain"},
+      body:JSON.stringify({id:anon, b:communityId, stars:stars})
+    }).catch(()=>{}); }catch(e){}
+  }
+  const t=document.getElementById("crateTitle"); if(t) t.textContent="Thanks!";
+}
+function reportCommunity(){
+  if(crateDone) return;
+  crateDone=true;
+  const anon=hgAnon();
+  if(anon&&communityId){
+    try{ fetch("https://fourbythree-stats.hankmt.workers.dev/cprep",{
+      method:"POST", keepalive:true, headers:{"Content-Type":"text/plain"},
+      body:JSON.stringify({id:anon, b:communityId})
+    }).catch(()=>{}); }catch(e){}
+  }
+  const rl=document.getElementById("crateReport"); if(rl) rl.textContent="Reported — thanks";
 }
 /* Text / emoji recap of the result — doubles as the share image's alt text and
    the shared text payload. Hub shows as 🌟, each other word as its

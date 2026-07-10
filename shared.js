@@ -67,9 +67,29 @@ const GRUE=[3,1,0,2];                 /* purple → green → blue → yellow (n
 function b64e(s){return btoa(unescape(encodeURIComponent(s))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");}
 function b64d(s){s=s.replace(/-/g,"+").replace(/_/g,"/");while(s.length%4)s+="=";return decodeURIComponent(escape(atob(s)));}
 function encPuzzle(p){return b64e(JSON.stringify(p));}
+/* full structural validation — used for every decoded payload (shared links,
+   scheduled puzzles, builder previews) so a malformed link can never crash the
+   game mid-init. Requires 4 proper category tuples and 9 unique words. */
+function validPuzzle(p){
+  if(!p||typeof p!=="object") return false;
+  if(typeof p.s!=="string"||!norm(p.s)||p.s.length>40) return false;
+  if(!Array.isArray(p.c)||p.c.length!==4) return false;
+  const words=[norm(p.s)];
+  for(const c of p.c){
+    if(!Array.isArray(c)||c.length<3) return false;
+    if(typeof c[0]!=="string"||!c[0].trim()||c[0].length>60) return false;
+    for(const w of [c[1],c[2]]){
+      if(typeof w!=="string"||!norm(w)||w.length>40) return false;
+      words.push(norm(w));
+    }
+  }
+  if(new Set(words).size!==9) return false;
+  for(const k of ["a","e","x"]) if(p[k]!==undefined&&(typeof p[k]!=="string"||p[k].length>200)) return false;
+  return true;
+}
 function decPuzzle(str){
   const p=JSON.parse(b64d(str));
-  if(!p||!p.s||!Array.isArray(p.c)||p.c.length!==4) throw new Error("bad");
+  if(!validPuzzle(p)) throw new Error("bad");
   return p;
 }
 
