@@ -159,9 +159,9 @@
       box-shadow .3s ease, border-color .3s ease;}
   .humans-promo.in{max-height:320px; padding:14px 16px 15px; border-width:1.5px; margin-bottom:14px;
     opacity:1; transform:none;}
-  /* soft yellow → white wash, a quiet nod to the Humans brand */
-  .humans-promo{background:linear-gradient(115deg,#fdf3cd 0%,#fffdf4 48%,#ffffff 100%);}
-  html.thm-dark .humans-promo{background:linear-gradient(115deg,#2c2610 0%,#211f18 52%,#1e1e1e 100%);}
+  /* a whisper of the four game colours drifting across the card */
+  .humans-promo::before{content:""; position:absolute; inset:0; pointer-events:none; opacity:.24;
+    background:linear-gradient(115deg, var(--t0), transparent 30%, transparent 62%, var(--t2) 88%, var(--t3));}
   .humans-promo:hover{transform:translateY(-2px); border-color:#d4a017;
     box-shadow:0 6px 18px rgba(43,38,32,.14);}
   html.thm-dark .humans-promo:hover{box-shadow:0 6px 18px rgba(0,0,0,.5);}
@@ -177,14 +177,6 @@
     color:var(--ink); border:1.5px solid var(--ink); border-radius:999px; padding:6px 15px;
     transition:background .25s ease, color .25s ease;}
   .humans-promo:hover .hp-cta{background:var(--ink); color:var(--paper);}
-  /* tiny equaliser: three bars quietly playing */
-  .hp-eq{display:inline-flex; align-items:flex-end; gap:2px; height:11px;}
-  .hp-eq i{width:2.5px; border-radius:1px; background:#d4a017; animation:hp-eq 1.15s ease-in-out infinite;}
-  .hp-eq i:nth-child(1){height:6px;}
-  .hp-eq i:nth-child(2){height:11px; animation-delay:.22s;}
-  .hp-eq i:nth-child(3){height:8px; animation-delay:.48s;}
-  @keyframes hp-eq{0%,100%{transform:scaleY(.45);}45%{transform:scaleY(1);}}
-  html.a11y-rm .hp-eq i{animation:none;}
   /* the "listen on" sheet, 4×3-skinned */
   .hm-title{font-size:20px; font-weight:800; text-align:center; margin:6px 8px 2px; color:var(--ink);
     letter-spacing:.01em;}
