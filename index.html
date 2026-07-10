@@ -55,6 +55,7 @@
     function poolIds(socal){
       var n=playCount();
       return ADS.filter(function(a){
+        if(a.noRotate) return false;               /* dashboard-label-only entries */
         if(a.socal&&!socal) return false;
         if(a.minPlays&&n<=a.minPlays) return false;
         return true;
@@ -148,6 +149,22 @@
   <div class="mcard" role="dialog" aria-modal="true" aria-label="Results">
     <button class="mclose" onclick="closeModal()" aria-label="Close">×</button>
     <div id="mbody" class="result"></div>
+  </div>
+</div>
+<div id="humansModal">
+  <div class="mback" onclick="closeHumans()"></div>
+  <div class="mcard" role="dialog" aria-modal="true" aria-label="Listen to Humans">
+    <button class="mclose" onclick="closeHumans()" aria-label="Close">×</button>
+    <div class="hm-title">Humans: a podcast about humans</div>
+    <div class="hm-kicker">Listen on</div>
+    <a class="hm-pill" href="https://podcasts.apple.com/us/podcast/humans/id1896666596" target="_blank" rel="noopener">Apple Podcasts</a>
+    <a class="hm-pill" href="https://open.spotify.com/show/033gGneVjpMtAJoczENfRr" target="_blank" rel="noopener">Spotify</a>
+    <a class="hm-pill" href="https://www.youtube.com/channel/UC7QrGBQ7DGv47UXJobHmL1Q" target="_blank" rel="noopener">YouTube</a>
+    <a class="hm-pill" href="https://pca.st/b5oy23dd" target="_blank" rel="noopener">Pocket Casts</a>
+    <a class="hm-pill" href="https://overcast.fm/itunes1896666596/humans" target="_blank" rel="noopener">Overcast</a>
+    <a class="hm-pill" href="https://music.amazon.com/podcasts/c1a29dfe-0d6e-40e1-bce5-8f6df42aa498/humans" target="_blank" rel="noopener">Amazon Music</a>
+    <a class="hm-pill" href="https://iheart.com/podcast/333684986/" target="_blank" rel="noopener">iHeart</a>
+    <a class="hm-pill" href="https://www.humanswithhank.com" target="_blank" rel="noopener">Web</a>
   </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -427,6 +444,7 @@ function startGame(){
   document.getElementById("result").style.display="none";
   document.getElementById("fbCard").style.display="none";
   const cse=document.getElementById("commStats"); cse.style.display="none"; cse.innerHTML=""; commStatsShown=false;
+  const hp=document.getElementById("humansPromo"); hp.style.display="none"; hp.classList.remove("in");
   document.getElementById("solvedList").innerHTML="";
   const db=document.getElementById("deselBtn");
   db.style.display=""; db.style.opacity="";
@@ -1399,6 +1417,7 @@ function showCommStats(){
   const reveal=()=>{
     el.style.display="";
     if(G) G.from(el,{opacity:0,y:14,duration:.5,ease:"power2.out"});
+    armHumansPromo();   /* the podcast card rides in with the stats */
   };
   x43stats(dailyKey).then(d=>{
     if(!d||!d.ok) return;
@@ -1426,6 +1445,45 @@ function showCommStats(){
     reveal();
   }).catch(()=>{ commStatsShown=false; }); /* network hiccup: allow a retry on the next close */
 }
+/* ---------- Humans podcast promo (between the board and the stats) ---------- */
+function armHumansPromo(){
+  const hp=document.getElementById("humansPromo");
+  if(!hp||hp.style.display==="") return;
+  hp.style.display="";
+  /* slide in when it scrolls into view (or instantly under reduced motion) */
+  if(reduceMotion()||!("IntersectionObserver" in window)){ hp.classList.add("in"); return; }
+  const io=new IntersectionObserver(es=>{
+    if(es.some(e=>e.isIntersecting)){ hp.classList.add("in"); io.disconnect(); }
+  },{threshold:0.25});
+  io.observe(hp);
+}
+function openHumans(){
+  const m=document.getElementById("humansModal");
+  m.style.display="flex";
+  if(G){
+    G.fromTo(m.querySelector(".mback"),{opacity:0},{opacity:1,duration:.3});
+    G.fromTo(m.querySelector(".mcard"),{scale:.92,opacity:0,y:26},{scale:1,opacity:1,y:0,duration:.5,ease:"back.out(1.6)"});
+  }
+  const close=m.querySelector(".mclose"); if(close) close.focus();
+}
+function closeHumans(){ document.getElementById("humansModal").style.display="none"; }
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"&&document.getElementById("humansModal").style.display==="flex") closeHumans();
+});
+/* a tap on any listen link counts as an ad click on the finished game — the /e
+   upsert takes the re-send in stride, so the ads dashboard sees "humanspod" */
+document.addEventListener("click",e=>{
+  if(!(e.target.closest&&e.target.closest("#humansModal a"))) return;
+  try{
+    adClicked=true; adClickedId="humanspod"; saveGame();
+    if(window.x43beacon&&dailyKey&&over){
+      const cs=calcScore(), ct=catTelemetry();
+      x43beacon({p:dailyKey, rel:(dailyKey===todayStr())?1:0, w:cs.won?1:0,
+        m:mistakes, s:cs.score, ms:solveMs, st:streakWithToday(), ad:1,
+        adid:"humanspod", c:ct.c, so:ct.so});
+    }
+  }catch(err){}
+});
 let modalLastFocus=null;
 function openModal(fancy){
   const m=document.getElementById("modal");

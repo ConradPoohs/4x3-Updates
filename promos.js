@@ -11,6 +11,10 @@
  *         banner/side  the HTML itself
  */
 window.X43_ADS=[
+  /* not a rotating banner: the post-game slide-in card above the community
+     stats (index.html renders it itself). Listed here so the ads dashboard
+     knows its name; noRotate keeps it out of the banner pool. */
+  {id:"humanspod",name:"Humans (post-game card)",noRotate:true,banner:"",side:""},
   {id:"ff",name:"Focus Friend",bc:"",sc:"",
    banner:`<img class="promo-bean" src="hankbeantrans.png" alt=""> Need a cozy tool to help you take back control from social media apps? My app <b>Focus Friend</b> is zero cost and ad-free!! <a href="https://apps.apple.com/us/app/focus-friend-by-hank-green/id6742278016" target="_blank" rel="noopener">iPhone</a> · <a href="https://play.google.com/store/apps/details?id=com.underthing.focus.friend" target="_blank" rel="noopener">Android</a>`,
    side:`<img class="promo-img" src="focusfriendtrans.png" alt="Focus Friend"><div class="promo-kicker">From Hank</div><p class="promo-body">Need a cozy tool to help you take back control from social media apps? My app <b>Focus Friend</b> is zero cost and ad-free!!</p><div class="promo-apps"><a href="https://apps.apple.com/us/app/focus-friend-by-hank-green/id6742278016" target="_blank" rel="noopener">iPhone</a><a href="https://play.google.com/store/apps/details?id=com.underthing.focus.friend" target="_blank" rel="noopener">Android</a></div>`},
