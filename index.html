@@ -802,6 +802,12 @@ function pollEmoji(){
 /* hover-for-definition copy (BETA) — only puzzles listed here get tooltips on the
    finished answer list, keyed by hub word then exact category name */
 const DEFS={
+  CORNER:{
+    "Where Lines Meet":{ANGLE:"The figure formed when two rays share an endpoint, measured in degrees.",VERTEX:"The exact point where two lines or edges come together.",CORNER:"The spot where two walls, streets, or edges meet."},
+    "Out of the Way Spots":{NOOK:"A small sheltered recess, ideal for breakfast or a good book.",CRANNY:"A narrow crack or crevice, famously searched along with every nook.",CORNER:"A quiet tucked-away spot, like the table nobody can see from the door."},
+    "Soccer Kicks":{FREE:"Awarded after a foul; if it is the direct kind, you can score straight from it.",PENALTY:"A one-on-one shot from twelve yards with only the keeper to beat.",CORNER:"Taken from the flag after the defense knocks the ball out of bounds behind the goal."},
+    "___ office":{OVAL:"The president's famous workspace in the West Wing.",BOX:"Where tickets are sold, and how a movie's success is measured.",CORNER:"The workspace with windows on two sides that every ambitious employee covets."}
+  },
   GOAL:{
     "___ Keeper":{ZOO:"A zookeeper cares for the animals at a zoo.",GOAL:"A goalkeeper (goalie) guards the net in soccer and hockey.",BEE:"A beekeeper raises bees and harvests honey."},
     "A Score in Sport":{BASKET:"In basketball, a shot through the hoop is a basket.",GOAL:"In soccer or hockey, putting it in the net scores a goal.",TRY:"In rugby, grounding the ball past the line scores a try."},
@@ -939,6 +945,42 @@ const DEFS={
     "Juicy Gossip":{DIRT:"The unflattering secrets you dig up on someone.",SCOOP:"An exclusive bit of breaking news.",TEA:"The hot goss you spill."},
     "Sounds Like a Letter":{CUE:"A long stick for striking billiard balls.",PEA:"A small round green vegetable.",TEA:"The hot drink."},
     "___ Party":{BLOCK:"A neighborhood street bash with the road closed off.",POLITICAL:"An organized group vying for elected office.",TEA:"A dainty afternoon gathering of cups and saucers (or a certain 1773 protest in Boston)."}
+  },
+  PEEP:{
+    "A Quick Look":{GLANCE:"A brief look, over almost before it starts.",GLIMPSE:"A fleeting, partial view of something.",PEEP:"A little look, often through a small opening."},
+    "A Member of Your Crew":{HOMIE:"A close friend from the neighborhood.",BUD:"A casual, friendly word for a pal.",PEEP:"One of your people, as in \"my peeps.\""},
+    "Marshmallow Treats":{SMORE:"Toasted marshmallow and chocolate squished between graham crackers.",FLUFF:"The spreadable marshmallow creme in a jar.",PEEP:"The sugar-coated chick that shows up every Easter."},
+    "The Faintest Sound":{SQUEAK:"A thin, high little noise, like a hinge or a mouse.",MURMUR:"A low, indistinct sound just barely above silence.",PEEP:"The tiniest utterance, as in \"not another peep out of you.\""}
+  },
+  GLASS:{
+    "Drinking Vessels":{MUG:"A sturdy handled cup for coffee or cocoa.",GOBLET:"A stemmed drinking cup, faintly medieval.",GLASS:"The clear vessel you fill with water or wine."},
+    "Recyclables":{PAPER:"Newsprint and cardboard, headed for pulping.",ALUMINUM:"Cans, endlessly meltable and remade.",GLASS:"Bottles and jars, sorted and melted back down."},
+    "Parts of a Window":{SILL:"The ledge along the bottom where the cat sits.",SCREEN:"The mesh that keeps the bugs out.",GLASS:"The transparent pane you actually look through."},
+    "Ending in Words for the Butt":{ALBUM:"Ends in BUM.",TOUCAN:"Ends in CAN.",GLASS:"Ends in ASS."}
+  },
+  HUB:{
+    "Parts of a Bike Wheel":{SPOKE:"One of the thin rods running out to the rim.",RIM:"The outer metal hoop that the tire sits on.",HUB:"The center piece the wheel turns around."},
+    "Central Part":{HEART:"The vital middle of something, as in the heart of the city.",CORE:"The innermost part, the bit everything else surrounds.",HUB:"The busy center that everything else connects to."},
+    "Network Gear":{ROUTER:"The box that directs traffic between your devices and the internet.",SWITCH:"A box that connects devices on a local network intelligently.",HUB:"The dumb old box that just repeats every signal to every port."},
+    "___ Cap":{KNEE:"The bone shielding the front of your knee joint.",NIGHT:"A little drink before bed.",HUB:"The shiny disc that covers the center of a car wheel."}
+  },
+  PERIODS:{
+    "Punctuation Marks":{COMMAS:"The little hooks that separate clauses and list items.",COLONS:"Two stacked dots that introduce a list or an explanation.",PERIODS:"The dots that bring a sentence to a full stop."},
+    "Chunks of a Sporting Event":{QUARTERS:"The four segments of a football or basketball game.",INNINGS:"The nine divisions of a baseball game.",PERIODS:"The three segments of a hockey game."},
+    "Geologic Time Divisions":{EONS:"The largest spans of deep time, like the Phanerozoic.",ERAS:"The next step down, like the Mesozoic.",PERIODS:"The chunks inside those, like the Jurassic and the Cretaceous."},
+    "Annoying Things Women Deal With":{MEN:"Look, we are trying.",HEELS:"Shoes that trade comfort for height.",PERIODS:"Monthly, crampy, and famously inconvenient."}
+  },
+  DRAW:{
+    "To Sketch":{SKETCH:"To rough something out quickly in pencil.",DOODLE:"To scribble idly in a margin while your mind wanders.",DRAW:"To put pencil to paper and make a picture."},
+    "A Random Selection":{RAFFLE:"Buy a ticket, cross your fingers, hope your number comes up.",LOTTERY:"Numbered balls tumble out and somebody gets very rich.",DRAW:"Names or teams pulled from a hat, as before a tournament."},
+    "A Tied Game":{TIE:"Neither side wins; the scores are level at the end.",STALEMATE:"A deadlock where nobody can make progress.",DRAW:"A match that finishes all square, one apiece."},
+    "Bridges":{FOOT:"A narrow span built just for people on foot.",SUSPENSION:"A span hung from cables slung between tall towers.",DRAW:"A span that lifts or splits open to let a boat through."}
+  },
+  FINAL:{
+    "Kinds of School Test":{MIDTERM:"The exam that lands halfway through the term.",QUIZ:"A short, low-stakes check.",FINAL:"The big one at the end of the semester."},
+    "Meaning Last":{ULTIMATE:"The very last in a sequence, not merely the best.",CLOSING:"Coming at the very end, as in closing remarks.",FINAL:"Last, with nothing at all after it."},
+    "Not Up for Debate":{BINDING:"Legally locked in, and you are stuck with it.",CONCLUSIVE:"Settling the matter beyond any remaining doubt.",FINAL:"The decision stands and there is no appeal."},
+    "Today, in Three Words":{WORLD:"Every nation on the planet had a shot at this one.",CUP:"The solid gold trophy the winners get to lift.",FINAL:"Today's game."}
   }
 };
 /* post-game easter egg: tap the hub to press it in and burst out emojis */

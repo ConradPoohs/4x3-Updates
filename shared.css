@@ -610,6 +610,9 @@
   html.thm-dark.a11y-hc .pauthor, html.thm-dark.a11y-hc .srow .sd, html.thm-dark.a11y-hc .streak-tag,
   html.thm-dark.a11y-hc #a11yBtn, html.thm-dark.a11y-hc .stat span,
   html.thm-dark.a11y-hc .cell .auth{color:#e0e0e0 !important;}
+  /* solved-category rows use DARK tints in dark mode, so HC's forced dark-brown
+     text (fine on the light pastels) turned invisible — force near-white instead */
+  html.thm-dark.a11y-hc .scat span{color:#ffffff !important;}
   html.thm-dark.a11y-hc footer a{color:#ffffff;}
   html.thm-dark.a11y-hc .tin{border-color:#bdbdbd;}
 
