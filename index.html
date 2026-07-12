@@ -230,7 +230,7 @@
 
 
   <footer>
-    <nav class="foot-links"><a href="archive.html">Archive</a><a href="history.html">history</a><a href="community.html">community puzzles</a><a href="https://hankgreen.com/smush">SMUSH</a></nav>
+    <nav class="foot-links"><a href="archive.html">Archive</a><a href="history.html">history</a><a href="community.html">community puzzles</a><a href="https://hankgreen.com/smush">SMUSH</a><a onclick="openFbk()" style="cursor:pointer">feedback</a></nav>
     <div class="foot-by">by Hank Green <img src="fishtrans.png" alt="" style="height:20px;vertical-align:-5px;opacity:.4"></div>
   </footer>
 </div>
@@ -264,6 +264,18 @@
     <a class="hm-pill" href="https://music.amazon.com/podcasts/c1a29dfe-0d6e-40e1-bce5-8f6df42aa498/humans" target="_blank" rel="noopener">Amazon Music</a>
     <a class="hm-pill" href="https://iheart.com/podcast/333684986/" target="_blank" rel="noopener">iHeart</a>
     <a class="hm-pill" href="https://www.humanswithhank.com" target="_blank" rel="noopener">Web</a>
+  </div>
+</div>
+<div id="fbkModal" style="position:fixed;inset:0;z-index:115;display:none;align-items:center;justify-content:center">
+  <div class="mback" onclick="closeFbk()"></div>
+  <div class="mcard" role="dialog" aria-modal="true" aria-label="Send feedback">
+    <button class="mclose" onclick="closeFbk()" aria-label="Close">×</button>
+    <b>Feedback 💌</b>
+    <p style="font-size:13.5px;color:var(--mut);margin:8px 0 10px">Something broken, unfair, or delightful? Tell Hank.</p>
+    <textarea id="fbkNotes" style="width:100%;min-height:90px;border:1.5px solid var(--line);border-radius:8px;padding:8px;font-size:14px;font-family:inherit" placeholder="What's on your mind?"></textarea>
+    <label style="display:block;font-size:13px;margin:10px 0 4px">Your name (optional)</label>
+    <input type="text" id="fbkName" maxlength="40" autocomplete="nickname">
+    <div class="rowbtns" style="margin-top:12px"><button class="hbtn primary" id="fbkSend" onclick="sendFbk()">Send</button></div>
   </div>
 </div>
 <div id="shareModal">
@@ -1784,6 +1796,34 @@ document.addEventListener("click",e=>{
   }catch(err){}
 });
 /* ---------- exp2: share screen + post-game hub ---------- */
+/* general feedback (any day, no beta link needed) — lands in the same beta_fb
+   table keyed "x43"+YYYYMMDD, one row per player per day (resends update) */
+function openFbk(){
+  try{ document.getElementById("fbkName").value=localStorage.getItem("x43_name")||""; }catch(e){}
+  document.getElementById("fbkModal").style.display="flex";
+}
+function closeFbk(){ document.getElementById("fbkModal").style.display="none"; }
+async function sendFbk(){
+  const btn=document.getElementById("fbkSend");
+  const notes=(document.getElementById("fbkNotes").value||"").trim();
+  const name=(document.getElementById("fbkName").value||"").trim();
+  if(!notes){ toast("Say a little something first 🙂"); return; }
+  try{ if(name) localStorage.setItem("x43_name",name); }catch(e){}
+  btn.disabled=true; btn.textContent="Sending…";
+  let anon=""; try{ anon=localStorage.getItem("hg_anon")||""; }catch(e){}
+  const bp="x43"+todayStr().replace(/-/g,"");
+  try{
+    const r=await fetch("https://fourbythree-stats.hankmt.workers.dev/fb",{
+      method:"POST",headers:{"Content-Type":"text/plain"},
+      body:JSON.stringify({id:anon, bp:bp, fb:1, hub:dailyKey||"", name:name,
+        w:over&&mistakes<MAXM?1:0, m:mistakes, notes:notes.slice(0,2000),
+        dev:(matchMedia&&matchMedia("(pointer:coarse)").matches)?"mobile":"desktop"})});
+    if(!r.ok) throw 0;
+    closeFbk(); toast("Feedback sent — thank you! 💌");
+    document.getElementById("fbkNotes").value="";
+  }catch(e){ toast("Hmm, couldn't send. Try again?"); }
+  btn.disabled=false; btn.textContent="Send";
+}
 function openShareScreen(){
   const b=document.getElementById("smBody");
   b.innerHTML="<b>Share your result</b><div id='smImgWrap' style='text-align:center;margin:12px 0'></div>"+
@@ -1828,7 +1868,9 @@ function closeShareScreen(){
   if(over&&!isBeta&&!communityId) showPostHub();   /* the share screen also funnels into the hub */
 }
 document.addEventListener("keydown",e=>{
-  if(e.key==="Escape"&&document.getElementById("shareModal").style.display==="flex") closeShareScreen();
+  if(e.key!=="Escape") return;
+  if(document.getElementById("shareModal").style.display==="flex") closeShareScreen();
+  if(document.getElementById("fbkModal").style.display==="flex") closeFbk();
 });
 function showPostHub(){
   if(!over||isBeta||communityId) return;
