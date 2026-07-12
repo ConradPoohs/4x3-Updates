@@ -76,8 +76,10 @@
   #admireBack{display:none;margin:14px auto 0;}
   #shareModal{position:fixed;inset:0;z-index:110;display:none;align-items:center;justify-content:center;}
   #shareModal .sm-text{background:var(--soft);border:1.5px solid var(--line);border-radius:10px;
-    padding:10px 12px;font-size:13px;line-height:1.5;white-space:pre-wrap;text-align:left;
+    padding:12px;font-size:13px;line-height:1.5;text-align:center;
     margin:12px 0;color:var(--ink);font-variant-numeric:tabular-nums;}
+  #shareModal .sm-grid{line-height:1.12;font-size:15px;margin:7px 0;}
+  #shareModal .sm-url{display:block;margin-top:6px;color:var(--mut);}
 </style>
 <script src="shared.js"></script>
 <script src="stats-beacon.js"></script>
@@ -1801,7 +1803,18 @@ function openShareScreen(){
       wrap.appendChild(cv);
     }catch(e2){ console.error("share card:",e2); }
   }
-  document.getElementById("smText").textContent=resultDescription();
+  /* display version: centred, with the emoji grid lines pulled tight
+     (the copied text itself is untouched plain text) */
+  (function(){
+    const lines=resultDescription().split("\n");
+    const url=lines.pop();
+    const meta=[], grid=[];
+    lines.forEach(l=>{ (/[A-Za-z0-9]/.test(l)?meta:grid).push(l); });
+    document.getElementById("smText").innerHTML=
+      meta.map(esc).join("<br>")+
+      (grid.length?"<div class='sm-grid'>"+grid.map(esc).join("<br>")+"</div>":"")+
+      "<span class='sm-url'>"+esc(url)+"</span>";
+  })();
   if(document.getElementById("modal").style.display==="flex") closeModal();
   const m=document.getElementById("shareModal");
   m.style.display="flex";
@@ -2501,9 +2514,10 @@ function resultEmojiRows(){
 }
 function resultDescription(){
   const {won,score,ruleBreaker}=calcScore();
-  const head="https://4x3.fun"+(dailyKey?"\n"+fmtDate(dailyKey):"");   /* top line doubles as the share link — full scheme so every app linkifies it */
-  if(ruleBreaker) return head+"\n"+score+" points • RULE BREAKER 💀\n"+resultEmojiRows();
-  return head+"\n"+(won?score+" points":"Out of guesses")+" • "+(mistakes?mistakes+" mistake"+(mistakes===1?"":"s"):"No mistakes")+"\n"+resultEmojiRows();
+  const head=dailyKey?fmtDate(dailyKey)+"\n":"";
+  const tail="\nhttps://4x3.fun";   /* link at the bottom — full scheme so every app linkifies it */
+  if(ruleBreaker) return head+score+" points • RULE BREAKER 💀\n"+resultEmojiRows()+tail;
+  return head+(won?score+" points":"Out of guesses")+" • "+(mistakes?mistakes+" mistake"+(mistakes===1?"":"s"):"No mistakes")+"\n"+resultEmojiRows()+tail;
 }
 function feedbackText(){
   const won=mistakes<MAXM;
