@@ -397,13 +397,23 @@ async function init(){
         const data=await r.json();
         puzzleData=data;
         const today=todayStr();
-        if(testDate&&data[testDate]){
-          /* scheduled-puzzle test link: beta mode, feedback reporting, and NO
-             dailyKey — a test run must never touch streaks, history, or saves */
+        if(testDate&&data[testDate]&&testDate>today){
+          /* scheduled-puzzle test link (FUTURE dates only): beta mode, feedback
+             reporting, and NO dailyKey — a test run must never touch streaks,
+             history, or saves */
           puzzle=decPuzzle(data[testDate]); isBeta=true; betaDate=testDate;
           betaId="d"+testDate.replace(/[^0-9]/g,"");
         } else {
-          if(testDate) toast("No puzzle scheduled for that date — showing today's game.");
+          if(testDate){
+            /* test links EXPIRE once their puzzle ships: autocompleted or stale
+               URLs land on the real game instead of a ghost beta (and stop
+               polluting the beta telemetry). Strip the hash so the daily
+               rollover isn't blocked by a dead #t= fragment. */
+            toast(data[testDate]
+              ? "That test link has expired — here's today's puzzle."
+              : "No puzzle scheduled for that date — showing today's game.");
+            try{ history.replaceState(null,"",location.pathname+location.search); }catch(e){}
+          }
           let k=null;
           if(archiveDate&&data[archiveDate]&&archiveDate<=today){
             k=archiveDate;
