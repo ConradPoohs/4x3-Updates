@@ -1694,7 +1694,6 @@ function showCommStats(){
   const reveal=()=>{
     el.style.display="";
     if(G) G.from(el,{opacity:0,y:14,duration:.5,ease:"power2.out"});
-    armHumansPromo();   /* the podcast card rides in with the stats */
   };
   x43stats(dailyKey).then(d=>{
     if(!d||!d.ok) return;
