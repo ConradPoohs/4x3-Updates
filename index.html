@@ -20,6 +20,65 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script defer src="/_vercel/insights/script.js"></script>
 <link rel="stylesheet" href="shared.css">
+<style>
+  /* exp2: post-game hub + share screen */
+  #postHub{padding:10px 6px 6px;}
+  .ph-head{font-weight:800;font-size:30px;text-align:center;margin:6px 0 2px;color:var(--ink);
+    letter-spacing:.01em;line-height:1.1;}
+  .ph-date{text-align:center;font-size:11.5px;font-weight:700;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--mut2);margin:0 0 18px;}
+  /* stat trio: one soft pill, hairline edge, whisper dividers, each number
+     wearing one of the game's colors */
+  .ph-stats{display:flex;justify-content:center;align-items:stretch;
+    background:var(--soft2);border:1px solid var(--line);border-radius:999px;
+    padding:13px 8px 11px;margin:0 6px;
+    box-shadow:inset 0 1px 3px rgba(43,38,32,.05);}
+  .ph-stat{flex:1;text-align:center;max-width:140px;position:relative;}
+  .ph-stat+.ph-stat::before{content:"";position:absolute;left:0;top:18%;bottom:18%;
+    width:1px;background:var(--line);opacity:.7;}
+  .ph-stat b{display:block;font-size:28px;font-weight:800;line-height:1.05;
+    font-variant-numeric:tabular-nums;}
+  .ph-s1 b{color:var(--tc0);}
+  .ph-s2 b{color:var(--tc1);}
+  .ph-s3 b{color:#b3870f;}
+  html.thm-dark .ph-s3 b{color:#f0c94f;}
+  .ph-stat span{font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;
+    color:var(--mut);line-height:1.35;display:block;margin-top:4px;}
+  #phCard{margin:20px 0 16px;}
+  #phCard img,#phCard canvas{width:66%;max-width:250px;border-radius:12px;
+    box-shadow:0 2px 12px rgba(43,38,32,.14);}
+  /* the rainbow share pill: soft four-tint fill, animated rainbow border,
+     ink text — same double-gradient motif as the daily date pill */
+  .ph-share{border:2.5px solid transparent;border-radius:999px;padding:12px 38px;
+    font-weight:800;font-size:16px;font-family:inherit;color:var(--ink);cursor:pointer;
+    background:linear-gradient(100deg,var(--t0),var(--t1),var(--t2),var(--t3)) padding-box,
+      linear-gradient(100deg,var(--c0),var(--c1),var(--c2),var(--c3),var(--c2),var(--c1),var(--c0)) border-box;
+    background-size:auto,320% 100%;animation:toastflow 5s ease-in-out infinite alternate;
+    box-shadow:0 2px 10px rgba(43,38,32,.14);transition:transform .12s,box-shadow .12s;}
+  .ph-share:hover{transform:translateY(-2px);box-shadow:0 4px 14px rgba(43,38,32,.2);}
+  html.a11y-rm .ph-share{animation:none;}
+  .ph-row{display:flex;justify-content:center;gap:10px;margin:16px 0 22px;}
+  .ph-row .hbtn{flex:1;max-width:170px;}
+  /* SMUSH: a compact, centred cream card — light enough for the wordmark's
+     dark lettering, with a gold lip for the "new" energy */
+  .ph-smush{position:relative;display:flex;flex-direction:column;align-items:center;gap:7px;
+    width:fit-content;max-width:300px;margin:30px auto 4px;border-radius:16px;
+    padding:20px 30px 14px;text-decoration:none;
+    background:linear-gradient(165deg,#fdf7e6,#f7ecce);
+    border:1.5px solid rgba(212,160,23,.55);
+    box-shadow:0 2px 10px rgba(43,38,32,.12);transition:transform .12s,box-shadow .12s;}
+  .ph-smush:hover{transform:translateY(-2px);box-shadow:0 4px 14px rgba(43,38,32,.18);}
+  .ph-smush-tag{position:absolute;top:-9px;left:50%;transform:translateX(-50%);
+    background:#d4a017;color:#241d08;font-size:10px;font-weight:800;letter-spacing:.12em;
+    text-transform:uppercase;border-radius:999px;padding:3px 11px;white-space:nowrap;}
+  .ph-smush img{height:52px;width:auto;}
+  .ph-smush-txt{font-size:12.5px;color:#6b5a2e;letter-spacing:.02em;}
+  #admireBack{display:none;margin:14px auto 0;}
+  #shareModal{position:fixed;inset:0;z-index:110;display:none;align-items:center;justify-content:center;}
+  #shareModal .sm-text{background:var(--soft);border:1.5px solid var(--line);border-radius:10px;
+    padding:10px 12px;font-size:13px;line-height:1.5;white-space:pre-wrap;text-align:left;
+    margin:12px 0;color:var(--ink);font-variant-numeric:tabular-nums;}
+</style>
 <script src="shared.js"></script>
 <script src="stats-beacon.js"></script>
 </head>
@@ -107,15 +166,36 @@
         <div class="solvedlist" id="solvedList"></div>
       </div>
       <div id="result" style="display:none" class="result"></div>
+      <div id="postHub" style="display:none">
+        <div class="ph-head" id="phHead">Great work!</div>
+        <div class="ph-date" id="phDate"></div>
+        <div class="ph-stats">
+          <div class="ph-stat ph-s1"><b id="phPlayed">–</b><span>Completed</span></div>
+          <div class="ph-stat ph-s2"><b id="phWin">–</b><span>Win %</span></div>
+          <div class="ph-stat ph-s3"><b id="phStreak">–</b><span>Streak</span></div>
+        </div>
+        <div id="phCard" style="text-align:center;margin:14px 0 12px"></div>
+        <div class="rowbtns"><button class="ph-share" onclick="openShareScreen()">Share Your Results</button></div>
+        <div class="ph-row">
+          <button class="hbtn" onclick="admirePuzzle()">Back to Puzzle</button>
+          <button class="hbtn" id="phStatsBtn" onclick="hubStats()">Stats</button>
+        </div>
+        <a class="ph-smush" href="https://hankgreen.com/smush">
+          <span class="ph-smush-tag">Our new game</span>
+          <img src="https://www.hankgreen.com/smush/smushlogotrans.png" alt="SMUSH">
+          <span class="ph-smush-txt">Nine letters. Make words. Get points.</span>
+        </a>
+      </div>
+      <button id="admireBack" class="hbtn" onclick="backToHub()">← Back</button>
     </div>
     <div id="humansPromo" class="humans-promo" style="display:none" role="button" tabindex="0"
-         aria-label="Listen to the Humans podcast" onclick="openHumans()"
-         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openHumans();}">
+         aria-label="Bamboo toilet paper at Good.Store" onclick="goodStoreClicked()"
+         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goodStoreClicked();}">
       <div class="promo-kicker">From Hank</div>
-      <p>Hey! I have to say, of all the stuff I'm working on right now, the thing I'm most proud
-      of is my new podcast, <b>“Humans.”</b> I really hope you'll give it a listen. The recent episode
-      with Jad Abumrad (the creator of Radiolab) got rave reviews!</p>
-      <span class="hp-cta">Listen</span>
+      <p>For a limited time, <b>Good.Store</b> is working with Save Trees to provide cheap,
+      high quality bamboo-based toilet paper with all of the profit going to the Coral Reef
+      Alliance! The reviews are in and people love it!</p>
+      <span class="hp-cta">Check it out</span>
     </div>
     <div id="commStats" style="display:none" class="card cstats" aria-label="How everyone did"></div>
     <div id="fbCard" style="display:none" class="card fb">
@@ -147,13 +227,25 @@
   </div>
 
 
-  <footer>by Hank Green <img src="fishtrans.png" alt="" style="height:20px;vertical-align:-5px;opacity:.4"> · <a href="scoring.html">scoring</a> · <a href="archive.html">past puzzles</a> · <a href="build.html">build your own</a> · <a href="history.html">history</a> · <a href="community.html">community puzzles</a> · <a href="https://hankgreen.com/smush">new: SMUSH</a></footer>
+  <footer>
+    <nav class="foot-links"><a href="archive.html">Archive</a><a href="history.html">history</a><a href="community.html">community puzzles</a><a href="https://hankgreen.com/smush">SMUSH</a></nav>
+    <div class="foot-by">by Hank Green <img src="fishtrans.png" alt="" style="height:20px;vertical-align:-5px;opacity:.4"></div>
+  </footer>
 </div>
 <div id="modal">
   <div class="mback" onclick="closeModal()"></div>
   <div class="mcard" role="dialog" aria-modal="true" aria-label="Results">
     <button class="mclose" onclick="closeModal()" aria-label="Close">×</button>
     <div id="mbody" class="result"></div>
+  </div>
+</div>
+<button class="qmark" onclick="openScoring()" aria-label="How scoring works" title="How scoring works">?</button>
+<div id="scoreModal">
+  <div class="mback" onclick="closeScoring()"></div>
+  <div class="mcard" role="dialog" aria-modal="true" aria-label="How scoring works">
+    <button class="mclose" onclick="closeScoring()" aria-label="Close">×</button>
+    <b>Scoring</b>
+    <div id="scoreBody"></div>
   </div>
 </div>
 <div id="humansModal">
@@ -170,6 +262,13 @@
     <a class="hm-pill" href="https://music.amazon.com/podcasts/c1a29dfe-0d6e-40e1-bce5-8f6df42aa498/humans" target="_blank" rel="noopener">Amazon Music</a>
     <a class="hm-pill" href="https://iheart.com/podcast/333684986/" target="_blank" rel="noopener">iHeart</a>
     <a class="hm-pill" href="https://www.humanswithhank.com" target="_blank" rel="noopener">Web</a>
+  </div>
+</div>
+<div id="shareModal">
+  <div class="mback" onclick="closeShareScreen()"></div>
+  <div class="mcard" role="dialog" aria-modal="true" aria-label="Share your result">
+    <button class="mclose" onclick="closeShareScreen()" aria-label="Close">×</button>
+    <div id="smBody"></div>
   </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -482,6 +581,8 @@ function startGame(){
   startTime=Date.now(); solveMs=null;
   fb={diff:0,fun:0,special:""};
   document.getElementById("boardWrap").style.display="";
+  document.getElementById("postHub").style.display="none";
+  document.getElementById("admireBack").style.display="none";
   document.getElementById("result").style.display="none";
   document.getElementById("fbCard").style.display="none";
   { const cr=document.getElementById("crate"); cr.style.display="none"; crateDone=false; cRated=0; const t=document.getElementById("crateTitle"); if(t) t.textContent="Rate this puzzle"; const rl=document.getElementById("crateReport"); if(rl) rl.textContent="Report this puzzle"; }
@@ -1553,27 +1654,10 @@ function showResult(won,score,fancy,quiet){
     (won
       ? "<div class='tally-count' id='tallyCount'>"+(quiet?score:0)+"</div><div class='tally-list' id='tallyList'></div>"
       : "<h2>Out of guesses 😵</h2><div class='score'>"+(mistakes?mistakes+" mistake"+(mistakes===1?"":"s"):"No mistakes")+"</div>")+
-    "<div id='shareWrap' style='text-align:center;margin:12px 0'><img id='shareImg' alt='' style='width:78%;max-width:300px;border-radius:12px;box-shadow:0 2px 10px rgba(43,38,32,.15)'></div>"+
     "<div class='rowbtns'>"+
-      "<button class='hbtn primary' onclick='shareImage(this)'>"+(CAN_SHARE_FILES?"Share image":"Copy image")+"</button>"+
-      "<button class='hbtn primary' onclick='shareTextResult(this)'>"+(CAN_SHARE?"Share text":"Copy text")+"</button>"+
+      "<button class='hbtn primary' onclick='openShareScreen()'>Share</button>"+
       (pendingKey?"<button class='hbtn' onclick='closeModal();init()'>Play today's puzzle</button>":"")+
     "</div>";
-  const shareImg=document.getElementById("shareImg");
-  try{ shareImg.src=drawShareCard().toDataURL("image/png"); shareImg.style.display=""; }
-  catch(e){
-    /* toDataURL is blocked when the canvas is tainted (e.g. testing from a file://
-       URL taints it via the logo images). The canvas can still be SHOWN, though —
-       so display it in the img's place rather than hiding the card. */
-    console.error("share card:",e);
-    try{
-      const cv=drawShareCard();
-      cv.style.cssText="width:78%;max-width:300px;border-radius:12px;box-shadow:0 2px 10px rgba(43,38,32,.15)";
-      shareImg.style.display="none";
-      shareImg.insertAdjacentElement("afterend",cv);
-    }catch(e2){ shareImg.style.display="none"; console.error("share card fallback:",e2); }
-  }
-  shareImg.alt=resultDescription();
   /* the board's now-useless Submit button becomes the Results re-open button
      (so there's no separate Results button below the board) */
   const sb=document.getElementById("submitBtn");
@@ -1583,7 +1667,7 @@ function showResult(won,score,fancy,quiet){
   if(isBeta){ document.getElementById("fbCard").style.display=""; initFb(); }
   if(communityId){ document.getElementById("crate").style.display=""; initCrate(); }
   if(!quiet) openModal(fancy);
-  else if(dailyKey) showCommStats();   /* restored finished game: no modal, stats straight away */
+  else if(!isBeta&&!communityId) showPostHub();    /* restored finished game: straight to the hub */
   if(won){ if(quiet) renderTallyStatic(score); else runModalTally(score); }
 }
 /* ---------- community stats: "how everyone did" ----------
@@ -1665,8 +1749,29 @@ function openHumans(){
   const close=m.querySelector(".mclose"); if(close) close.focus();
 }
 function closeHumans(){ document.getElementById("humansModal").style.display="none"; }
+/* the post-game card currently promotes Good.Store — a tap tracks a click on
+   the same hpromo pipeline, then heads straight to the product (no sheet) */
+function goodStoreClicked(){
+  try{ if(window.x43hp&&dailyKey) x43hp(dailyKey,"c"); }catch(e){}
+  window.open("https://good.store/products/toilet-paper-24-good-store","_blank","noopener");
+}
+/* scoring popover: the old scoring page, minus the bragging section, in-game */
+function openScoring(){
+  const m=document.getElementById("scoreModal");
+  const b=document.getElementById("scoreBody");
+  if(!b.innerHTML) b.innerHTML=scoringHTML(false);   /* fill once, lazily */
+  m.style.display="flex";
+  if(G){
+    G.fromTo(m.querySelector(".mback"),{opacity:0},{opacity:1,duration:.3});
+    G.fromTo(m.querySelector(".mcard"),{scale:.92,opacity:0,y:26},{scale:1,opacity:1,y:0,duration:.5,ease:"back.out(1.6)"});
+  }
+  const close=m.querySelector(".mclose"); if(close) close.focus();
+}
+function closeScoring(){ document.getElementById("scoreModal").style.display="none"; }
 document.addEventListener("keydown",e=>{
-  if(e.key==="Escape"&&document.getElementById("humansModal").style.display==="flex") closeHumans();
+  if(e.key!=="Escape") return;
+  if(document.getElementById("humansModal").style.display==="flex") closeHumans();
+  if(document.getElementById("scoreModal").style.display==="flex") closeScoring();
 });
 /* a tap on any listen link → its own click event (NOT the plays-row adid slot,
    which belongs to the rotation banner that was on screen during the game) */
@@ -1677,6 +1782,80 @@ document.addEventListener("click",e=>{
     if(window.x43hp&&dailyKey) x43hp(dailyKey,"c");
   }catch(err){}
 });
+/* ---------- exp2: share screen + post-game hub ---------- */
+function openShareScreen(){
+  const b=document.getElementById("smBody");
+  b.innerHTML="<b>Share your result</b><div id='smImgWrap' style='text-align:center;margin:12px 0'></div>"+
+    "<div class='rowbtns'><button class='hbtn primary' onclick='shareImage(this)'>Copy image</button></div>"+
+    "<div class='sm-text' id='smText'></div>"+
+    "<div class='rowbtns'><button class='hbtn primary' onclick='shareTextResult(this)'>Copy text</button></div>";
+  const wrap=document.getElementById("smImgWrap");
+  try{
+    const img=document.createElement("img");
+    img.alt=resultDescription();
+    img.style.cssText="width:78%;max-width:300px;border-radius:12px;box-shadow:0 2px 10px rgba(43,38,32,.15)";
+    img.src=drawShareCard().toDataURL("image/png");
+    wrap.appendChild(img);
+  }catch(e){
+    try{ const cv=drawShareCard();
+      cv.style.cssText="width:78%;max-width:300px;border-radius:12px;box-shadow:0 2px 10px rgba(43,38,32,.15)";
+      wrap.appendChild(cv);
+    }catch(e2){ console.error("share card:",e2); }
+  }
+  document.getElementById("smText").textContent=resultDescription();
+  if(document.getElementById("modal").style.display==="flex") closeModal();
+  const m=document.getElementById("shareModal");
+  m.style.display="flex";
+  if(G){
+    G.fromTo(m.querySelector(".mback"),{opacity:0},{opacity:1,duration:.3});
+    G.fromTo(m.querySelector(".mcard"),{scale:.92,opacity:0,y:26},{scale:1,opacity:1,y:0,duration:.5,ease:"back.out(1.6)"});
+  }
+}
+function closeShareScreen(){
+  document.getElementById("shareModal").style.display="none";
+  if(over&&!isBeta&&!communityId) showPostHub();   /* the share screen also funnels into the hub */
+}
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"&&document.getElementById("shareModal").style.display==="flex") closeShareScreen();
+});
+function showPostHub(){
+  if(!over||isBeta||communityId) return;
+  document.getElementById("boardWrap").style.display="none";
+  document.getElementById("admireBack").style.display="none";
+  document.getElementById("postHub").style.display="";
+  /* headline by result */
+  const cs=calcScore();
+  document.getElementById("phHead").textContent=
+    cs.ruleBreaker?"Rule Breaker.":cs.perfect?"Perfect!":cs.won?"Great work!":"Tough one.";
+  try{ document.getElementById("phDate").textContent=fmtDate(dailyKey||todayStr()); }catch(e){}
+  /* the NYT trio: completed, win %, current streak (all local) */
+  try{
+    const st=loadStats(), played=st.played||0, won=st.won||0;
+    document.getElementById("phPlayed").textContent=played;
+    document.getElementById("phWin").textContent=played?Math.round(100*won/played):0;
+    document.getElementById("phStreak").textContent=currentStreak();
+  }catch(e){}
+  /* share card preview */
+  const pc=document.getElementById("phCard"); pc.innerHTML="";
+  try{
+    const img=document.createElement("img"); img.alt=resultDescription();
+    img.src=drawShareCard().toDataURL("image/png"); pc.appendChild(img);
+  }catch(e){ try{ pc.appendChild(drawShareCard()); }catch(e2){} }
+  /* no community stats without a daily key (e.g. DEMO board in local testing) */
+  document.getElementById("phStatsBtn").style.display=dailyKey?"":"none";
+}
+function admirePuzzle(){
+  document.getElementById("postHub").style.display="none";
+  document.getElementById("boardWrap").style.display="";
+  document.getElementById("admireBack").style.display="block";
+  layout(true);
+}
+function backToHub(){ showPostHub(); }
+function hubStats(){
+  showCommStats();
+  setTimeout(()=>{ const el=document.getElementById("commStats");
+    if(el&&el.style.display!=="none"){ try{ el.scrollIntoView({behavior:reduceMotion()?"auto":"smooth",block:"start"}); }catch(e){} } },350);
+}
 let modalLastFocus=null;
 function openModal(fancy){
   const m=document.getElementById("modal");
@@ -1699,7 +1878,7 @@ function closeModal(){
   const back=modalLastFocus;
   if(back&&document.contains(back)&&back.offsetParent!==null) back.focus();
   else { const rb=document.getElementById("submitBtn"); if(rb&&rb.offsetParent!==null) rb.focus(); }
-  if(over&&dailyKey) showCommStats();   /* result put away → show how everyone did */
+  if(over&&!isBeta&&!communityId) showPostHub();   /* result put away → the post-game hub */
 }
 document.addEventListener("keydown",e=>{
   const m=document.getElementById("modal");
@@ -1767,8 +1946,21 @@ let logoTaps=0, logoTapTimer=null;
     logoTaps++;
     clearTimeout(logoTapTimer);
     logoTapTimer=setTimeout(()=>{ logoTaps=0; },1200); /* taps must come in quick succession */
-    if(logoTaps>=5){ logoTaps=0; resetPuzzle(); }
+    if(logoTaps===5) resetPuzzle();                    /* 5 quick taps: fresh board (fires immediately) */
+    if(logoTaps>=10){ logoTaps=0; perfectPreview(); }  /* keep going to 10: preview a PERFECT game */
   });
+/* logo ×10: fabricate the maximal ending — perfect, hub-first, reverse rainbow,
+   gold plaque (85s), Efficient — so the end screen's full drama can be tested
+   without playing. Like the s-codes, nothing is saved; refresh to recover. */
+function perfectPreview(){
+  if(!cats.length) return;
+  guesses=REV_RAINBOW.map(ci=>[special,cats[ci].words[0],cats[ci].words[1]]);
+  solvedIdx=REV_RAINBOW.slice();
+  mistakes=0; penalty=0; over=true;
+  solveMs=85000; clicks=12;
+  toast("Preview: perfect game ✨");
+  showResult(true,calcScore().score,true);
+}
 /* ---------- shareable result image ---------- */
 const GOLD="#d4a017";
 const LOGO=new Image(); { const le=document.querySelector("img.logo"); if(le) LOGO.src=le.src; }
@@ -2199,23 +2391,23 @@ function flashBtn(btn,msg){ if(btn){const o=btn.textContent; btn.textContent=msg
    next to the image — AirDrop then tries to send 2 things and fails. The URL is
    already drawn onto the card, so there we share the file alone. */
 const APPLE_SHARE=/Mac|iPhone|iPad|iPod/.test(navigator.platform||"")||/iPhone|iPad|Macintosh/.test(navigator.userAgent||"");
+/* Copy image — clipboard on the FIRST click, never the share sheet. The
+   ClipboardItem gets a blob PROMISE so Safari accepts it inside the gesture. */
 function shareImage(btn){
   try{ if(window.x43share&&dailyKey) x43share(dailyKey); }catch(e){}
-  drawShareCard().toBlob(async blob=>{
-    if(!blob){ flashBtn(btn,"Couldn't render"); return; }
-    const file=new File([blob],"4x3-result.png",{type:"image/png"});
-    if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
-      const payload=APPLE_SHARE?{files:[file],title:"4 × 3"}
-                               :{files:[file],text:resultDescription(true),url:shareUrl(),title:"4 × 3"};
-      try{ await navigator.share(payload); return; }
-      catch(e){ if(e&&e.name==="AbortError") return; }   /* user dismissed the sheet: stop, don't fall through */
-    }
-    try{
-      await navigator.clipboard.write([new ClipboardItem({"image/png":blob})]);
-      flashBtn(btn,"Image copied!"); return;
-    }catch(e){}
-    flashBtn(btn,"Couldn't share");
-  },"image/png");
+  try{
+    const blobP=new Promise(res=>drawShareCard().toBlob(res,"image/png"));
+    navigator.clipboard.write([new ClipboardItem({"image/png":blobP})])
+      .then(()=>flashBtn(btn,"Image copied!"))
+      .catch(async ()=>{
+        /* older Chromium wants a resolved blob rather than a promise */
+        try{
+          const b=await blobP;
+          await navigator.clipboard.write([new ClipboardItem({"image/png":b})]);
+          flashBtn(btn,"Image copied!");
+        }catch(e){ flashBtn(btn,"Couldn't copy"); }
+      });
+  }catch(e){ flashBtn(btn,"Couldn't copy"); }
 }
 /* Share Text — native share with the URL in its own field so chat apps render it
    as a tappable link instead of inline text. No share API → copy the recap plus the
@@ -2225,13 +2417,7 @@ function shareTextResult(btn){
   /* keep a deep link only for a shared custom/archive puzzle; the daily relies on the
      "4x3.fun" line at the top, so nothing is appended to the bottom */
   const deep=/^#(p|d|b)=/.test(location.hash)?location.href:"";
-  (async()=>{
-    if(navigator.share){
-      try{ await navigator.share(Object.assign({title:"4 × 3",text:resultDescription()},deep?{url:deep}:{})); return; }
-      catch(e){ if(e&&e.name==="AbortError") return; }
-    }
-    copyText(resultDescription()+(deep?"\n"+deep:""),btn);
-  })();
+  copyText(resultDescription()+(deep?"\n"+deep:""),btn);   /* clipboard on the first click — no share sheet */
 }
 
 /* ---------- beta feedback ---------- */

@@ -1,14 +1,14 @@
 {
-  "index.html": "7150608ddcd873f30a49a2c7e68353fa",
-  "scoring.html": "c878c3d127b4d4788a9b4c6f048fdfb8",
-  "archive.html": "51fc1e72fec32c7766e0fc7960a3cfae",
-  "build.html": "2166332a956dd94f8855c928757a9bf8",
+  "index.html": "e6d16c0e40b3b489aa9417768a21a408",
+  "scoring.html": "9144860041a0ab04f4bec2050ef9bea4",
+  "archive.html": "6d6de9d31d6cee82894f204c78720d10",
+  "build.html": "291e8ba717354e063cdebc4bd53ebcca",
   "puzzles.json": "2946aee6380955b513838c0a41d13ab9",
-  "shared.css": "bfcd95d2eaae13431de29b28efa32572",
-  "shared.js": "f9fa87f58331216ae423f140237233db",
-  "history.html": "df2578fbc7e34f8fbee8cf8df8544715",
+  "shared.css": "91180b18e736a6e813066fcce32280dd",
+  "shared.js": "7fd6f517229c579f2f26585e800b740f",
+  "history.html": "5773c45198a6267378c473c57f0ce9c3",
   "hubpoll.json": "6b6f331ee1d7c537d8dc7bfca162b574",
   "stats-beacon.js": "646fe111b9a78814bbca347bc0d0fb3f",
-  "promos.js": "16758f734d57a02c0d97bc5b77a618de",
-  "community.html": "578081a424ab87b0475852089bf2f705"
+  "promos.js": "6e0810b3e05c69b1fbdbabfb5811947f",
+  "community.html": "475602f128be00236fa93e75aafde800"
 }

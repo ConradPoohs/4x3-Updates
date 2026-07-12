@@ -146,7 +146,26 @@
   .scat span{font-size:13.5px; color:var(--ink); letter-spacing:.3px; white-space:nowrap;}
   .scat .hub{color:#b8860b; font-weight:700;}
   /* result modal */
-  #modal, #humansModal{position:fixed; inset:0; z-index:100; display:none; align-items:center; justify-content:center;}
+  #modal, #humansModal, #scoreModal{position:fixed; inset:0; z-index:100; display:none; align-items:center; justify-content:center;}
+  /* end-of-game mode: the results take the WHOLE screen (NYT-style) on every
+     device; content sits in a centered ~430px column inside the sheet */
+  #modal.endmode{align-items:stretch;}
+  #modal.endmode .mcard{width:100%; max-width:none; max-height:none;
+    height:100vh; height:100dvh; border-radius:0; box-shadow:none;
+    padding:56px max(18px, calc(50% - 415px)) 28px;}
+  #modal.endmode .mclose{top:14px; right:16px;}
+  #modal.endmode .mclose::before{content:"Back to puzzle"; font-size:14px; font-weight:700;
+    margin-right:7px; vertical-align:4px; color:var(--mut);}
+  /* the "how does scoring work?" circle, pinned to the screen's bottom right */
+  button.qmark{position:fixed; right:14px; bottom:14px; z-index:50;
+    width:38px; height:38px; padding:0; border-radius:50%; box-sizing:border-box;
+    border:1.5px solid var(--line); background:var(--card); color:var(--mut);
+    font:700 17px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+    box-shadow:0 2px 8px rgba(43,38,32,.18);}
+  button.qmark:hover{border-color:var(--ink); color:var(--ink);}
+  button.qmark:focus-visible{outline:none; box-shadow:0 0 0 2px var(--paper),0 0 0 4px #1f6feb;}
+  html.thm-dark button.qmark{box-shadow:0 2px 8px rgba(0,0,0,.5);}
   /* Humans podcast promo — slides in between the board and the community stats */
   .humans-promo{position:relative; overflow:hidden; border:1.5px solid var(--line);
     background:var(--card); border-radius:14px; cursor:pointer;
@@ -293,6 +312,10 @@
   .stat b{display:block; font-size:28px;}
   .stat span{font-size:12.5px; color:var(--mut);}
   footer{text-align:center; font-size:12px; color:var(--mut2); margin-top:26px;}
+  /* two tidy link rows (play stuff / make stuff) + the byline underneath */
+  .foot-links{display:flex; flex-wrap:wrap; justify-content:center; column-gap:18px; row-gap:2px; margin-top:5px;}
+  .foot-links a{padding:3px 1px; white-space:nowrap;}
+  .foot-by{margin-top:11px;}
   footer a{color:inherit; text-decoration:underline; cursor:pointer;}
   footer a:hover{color:var(--ink);}
   footer a:focus-visible{outline:none; border-radius:4px; box-shadow:0 0 0 2px var(--paper),0 0 0 4px #1f6feb;}

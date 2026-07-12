@@ -63,6 +63,50 @@ const RAINBOW=[2,1,0,3];              /* yellow → green → blue → purple (t
 const GRELLOW=[3,0,2,1];              /* purple → blue → yellow → green (no points, just bragging) */
 const GRUE=[3,1,0,2];                 /* purple → green → blue → yellow (no points, just bragging) */
 
+/* ---------- scoring explainer ----------
+   One source of truth for "how the points work": the in-game ? popover uses it
+   without the bragging section; scoring.html (legacy deep links) shows it all. */
+function scoringHTML(brag){
+  const row=(l,v,cls)=>"<div class='srow'><span>"+l+"</span><span class='v "+(cls||"")+"'>"+v+"</span></div>";
+  const note=(l,d)=>"<div class='srow'><span>"+l+"</span><span class='sd'>"+d+"</span></div>";
+  return "<div class='hint'>Every win starts at 100 points. Lose points for mistakes, gain them for flair, then add your streak. A flawless run tops out at a clean 200 (plus your streak).</div>"+
+    "<div class='scoresec'><b>Mistakes</b>"+
+      row("Each mistake","−"+MISS,"bad")+
+      row("A slip with only two groups left","−"+MISS_LATE,"bad")+
+    "</div>"+
+    "<div class='scoresec'><b>Bonuses</b>"+
+      row("Hub First — lead every guess with the shared word","+"+HUB_BONUS,"good")+
+      row("Hub Middle — place the shared word second every guess","+"+HUB_MID_BONUS,"good")+
+      row("Blue First — solve the blue group first","+"+BLUE_BONUS,"good")+
+      row("Purple First — solve the purple group first","+"+PURPLE_BONUS,"good")+
+      row("Reverse Rainbow — purple → blue → green → yellow","+"+RAINBOW_BONUS,"good")+
+      row("Sub-90s — finish in under 90 seconds","+"+SPEED_BONUS,"good")+
+      row("Efficient — solve in the "+MIN_CLICKS+"-click minimum (no wasted taps)","+"+CLICK_BONUS,"good")+
+      row("Daily streak — for each day of your current streak","+1 / day","good")+
+    "</div>"+
+    (brag?("<div class='scoresec'><b>Just for bragging (no points)</b>"+
+      note("🌈 Rainbow","Solve yellow → green → blue → purple")+
+      note("🎾 Grellow","Solve purple → blue → yellow → green")+
+      note("🦚 Grue","Solve purple → green → blue → yellow")+
+      note("😤 God Damnit!","A perfect run (no mistakes + Hub First) ruined only by a green↔yellow or green↔blue swap")+
+      note("🌙 The Day Before","Play the day's puzzle between midnight and 1 am")+
+      note("🖲️ Click Happy","Win after "+MEGA_CLICKS+"+ clicks. Why?")+
+      note("✦ Streak milestones","A special banner — here and on your share card — the day your streak hits "+STREAK_MILESTONES.join(", ")+": silver at 5 and 10, gold from 25 up")+
+      note("🥞 Smusher","Try SMUSH (our other word game), then finish a 4×3")+
+      note("🎙️ Human","Check out the Humans podcast, then finish a 4×3")+
+      note("🔨 Button Smasher","When the game's over, the hub can take 20 more hits. See what happens")+
+    "</div>"):"")+
+    "<div class='scoresec'><b>Top honors</b>"+
+      note("Perfect Game","0 mistakes + Hub First + Reverse Rainbow → a clean 200 (before your streak)")+
+      note("🥇 Gold plaque","A perfect game in under 90 seconds")+
+      note("🥈 Silver plaque","A perfect game in under 120 seconds")+
+    "</div>"+
+    "<div class='scoresec'><b>Rule breaker</b>"+
+      row("RULE BREAKER — put the shared word LAST in every guess",RULE_BREAKER_SCORE,"bad")+
+      note("","Wipes every point you earned — score and streak bonus included — and leaves you at "+RULE_BREAKER_SCORE+". The shared word is meant to lead, not trail.")+
+    "</div>";
+}
+
 /* ---------- puzzle encoding ---------- */
 function b64e(s){return btoa(unescape(encodeURIComponent(s))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");}
 function b64d(s){s=s.replace(/-/g,"+").replace(/_/g,"/");while(s.length%4)s+="=";return decodeURIComponent(escape(atob(s)));}
