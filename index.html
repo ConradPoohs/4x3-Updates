@@ -115,10 +115,30 @@
     }
     /* gates: SoCal-only ads need the geo flag; minPlays ads need a seasoned player */
     function playCount(){ try{ return (JSON.parse(localStorage.getItem("x43_stats"))||{}).played||0; }catch(e){ return 0; } }
+    /* no Smush ads for people who already played (or are mid-game on) today's
+       Smush — both games share the hankgreen.com origin, so we can just look */
+    function playedSmushToday(){
+      try{
+        var d=new Date();
+        var k=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+        var h=JSON.parse(localStorage.getItem("smush_hist"))||{};
+        if(h[k]) return true;                       /* finished today's board */
+        for(var i=0;i<localStorage.length;i++){
+          var key=localStorage.key(i);
+          if(key&&key.indexOf("smush_save_"+k+"_")===0){
+            var sv=JSON.parse(localStorage.getItem(key));
+            if(sv&&sv.found&&sv.found.length) return true;   /* mid-game right now */
+          }
+        }
+      }catch(e){}
+      return false;
+    }
     function poolIds(socal){
       var n=playCount();
+      var smushed=playedSmushToday();
       return ADS.filter(function(a){
         if(a.noRotate) return false;               /* dashboard-label-only entries */
+        if(a.id==="smush"&&smushed) return false;  /* already converted today */
         if(a.socal&&!socal) return false;
         if(a.minPlays&&n<=a.minPlays) return false;
         return true;
