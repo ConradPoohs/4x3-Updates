@@ -375,6 +375,17 @@
     background:linear-gradient(120deg,#9c3b2c,#3a2f79 42%,#2b2c74); border-color:#f2c34e;}
   .promo-banner-swk a{color:#f7c948;}
   .promo-banner-swk a:hover{color:#ffe08a;}
+  /* Hollywood, Ending tour — the poster's sunset-over-sea gradient */
+  .promo-banner-hwe{color:#fdf3dd;
+    background:linear-gradient(115deg,#e8636f,#f2a05f 30%,#4b7fa6 62%,#5f9e6d); border-color:#f2c34e;}
+  .promo-banner-hwe b{color:#ffffff;}
+  .promo-banner-hwe a{color:#ffe08a;}
+  .promo-banner-hwe a:hover{color:#ffffff;}
+  .promo-side-hwe{color:#fdf3dd !important;
+    background:linear-gradient(160deg,#e8636f,#f2a05f 26%,#4b7fa6 58%,#5f9e6d) !important; border-color:#f2c34e !important;}
+  .promo-side-hwe .promo-kicker{color:#ffe9b8 !important;}
+  .promo-side-hwe .promo-body{color:#fdf3dd !important;}
+  .promo-side-hwe a{color:#ffe08a;}
   .promo-banner-maya{padding-left:70px; color:#5c3a22;
     background:linear-gradient(115deg,#fdf5e1,#fbe6bd 60%,#f6cf93);
     border-color:#eda64f;}
