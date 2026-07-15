@@ -642,6 +642,24 @@
   html.thm-dark.a11y-hc footer a{color:#ffffff;}
   html.thm-dark.a11y-hc .tin{border-color:#bdbdbd;}
 
+  /* MEDIA-QUERY TWINS of the combo repairs above. Some browsers (Firefox iOS)
+     can apply the CSS dark media query while JS matchMedia disagrees — dark
+     variables with no thm-dark class, so every repair above vanishes and
+     "one card color" / "high contrast" go light-grey-on-white. These twins
+     make the repairs hold whenever CSS says dark, class or no class. */
+  @media (prefers-color-scheme: dark){
+    html:not(.light) .tin.idle{animation-name:idledrift-dk;}
+    html:not(.light).a11y-oc .tin.idle{background-color:#282d2b !important;}
+    html:not(.light).a11y-hc body{color:#ffffff;}
+    html:not(.light).a11y-hc .tag, html:not(.light).a11y-hc .hint, html:not(.light).a11y-hc footer,
+    html:not(.light).a11y-hc .pauthor, html:not(.light).a11y-hc .srow .sd, html:not(.light).a11y-hc .streak-tag,
+    html:not(.light).a11y-hc #a11yBtn, html:not(.light).a11y-hc .stat span,
+    html:not(.light).a11y-hc .cell .auth{color:#e0e0e0 !important;}
+    html:not(.light).a11y-hc .scat span{color:#ffffff !important;}
+    html:not(.light).a11y-hc footer a{color:#ffffff;}
+    html:not(.light).a11y-hc .tin{border-color:#bdbdbd;}
+  }
+
   /* shadows: the warm rgba(43,38,32,…) shadows all but vanish on a dark page.
      Restrengthen the raised surfaces with a darker, slightly deeper shadow. */
   html.thm-dark .mcard{box-shadow:0 14px 44px rgba(0,0,0,.55);}

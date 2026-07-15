@@ -89,7 +89,10 @@ function render(){
   const wins=keys.filter(k=>h[k].w).length;
   const perfects=keys.filter(k=>h[k].p).length;
   const best=Math.max(...keys.map(k=>h[k].s));
-  const {cur,max}=streaks(keys.filter(k=>h[k].rel!==0));   /* exclude only known archive replays (pre-flag entries count) */
+  /* streaks are WIN streaks: losses break the chain (archive replays and losses
+     excluded; entries too old to carry the w flag count as wins) */
+  let {cur,max}=streaks(keys.filter(k=>h[k].rel!==0&&h[k].w!==0));
+  if(h[todayStr()]&&h[todayStr()].w===0) cur=0;   /* lost today: dead now, not tomorrow */
   /* hero streak + subtle colour-tinted squares */
   sumEl.innerHTML=
     "<div class='streak-hero'><div class='sh-num'>"+cur+"</div>"+
