@@ -568,10 +568,10 @@
       url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.05'/%3E%3C/svg%3E") fixed,
       var(--paper) linear-gradient(180deg,#181818 0%,var(--paper) 45%,#0e0e0e 100%) fixed;}
 
-  /* the logo carries its own paper background — frame it as a rounded card so
-     it reads as deliberate on the dark page instead of a hard-edged rectangle */
-  html.thm-dark .logo{background:#faf7f1; border-radius:16px; padding:7px 10px;
-    box-shadow:0 2px 12px rgba(0,0,0,.45);}
+  /* dark mode has its own logo art (light lettering, transparent) — swap the
+     image instead of boxing the light one. Class-targeted, so it covers every
+     page incl. the one that inlines the logo as a data: URL. */
+  html.thm-dark .logo{content:url("4x3darkmode.png");}
 
   /* one-off muted-text literals not covered by the var scale */
   html.thm-dark .streak-tag:hover,
@@ -615,7 +615,26 @@
   html.thm-dark .tile.sel .tin{background:#3f3f3f; color:#ffffff; border-color:#cfcfcf;}
 
   /* ads are light-designed; hide them in dark mode for now */
-  html.thm-dark .promo-banner, html.thm-dark .promo-side{display:none !important;}
+  /* ads run in dark mode too: the default pastel card gets a dark twin.
+     SWK is excluded — its indigo/red poster scheme is already dark-native. */
+  html.thm-dark .promo-banner:not(.promo-banner-swk),
+  html.thm-dark .promo-side:not(.promo-side-swk){
+    color:#d8d4cc;
+    background:linear-gradient(115deg,#252c3d,#233129 34%,#35301c 67%,#2d2440);
+    border-color:rgba(170,150,200,.35);}
+  html.thm-dark .promo-side:not(.promo-side-swk){box-shadow:0 8px 24px rgba(0,0,0,.5);}
+  html.thm-dark .promo-banner:not(.promo-banner-swk) a,
+  html.thm-dark .promo-side:not(.promo-side-swk) .promo-body a{color:#c9a3f5;}
+  html.thm-dark .promo-banner:not(.promo-banner-swk) a:hover,
+  html.thm-dark .promo-side:not(.promo-side-swk) .promo-body a:hover{color:#8ab1f7;}
+  html.thm-dark .promo-side:not(.promo-side-swk) .promo-kicker{color:#a99cc4;}
+  html.thm-dark .promo-side:not(.promo-side-swk) .promo-body{color:#d8d4cc;}
+  /* the SMUSH wordmark has a dark-mode variant — swap the image itself
+     (content:url works on <img> in all current browsers, keys off the light
+     logo's src, so it also covers the worker-hosted live ad pool) */
+  html.thm-dark .promo-smush,
+  html.thm-dark .promo-img[src*="smushlogo"]{
+    content:url("https://www.hankgreen.com/smush/smush-transparent-dark.png");}
 
   /* solved rows (.scat) now use the themed --t/--tc vars, so their text can
      stay var(--ink) in both modes; just brighten the gold hub + dashed

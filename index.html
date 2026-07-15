@@ -2680,9 +2680,7 @@ function recordHistory(){
       const cs2=calcScore(), ct=catTelemetry();
       x43beacon({p:dailyKey, rel:(dailyKey===todayStr())?1:0, w:cs2.won?1:0,
         m:mistakes, s:cs2.score, ms:solveMs, st:cs2.won?streakWithToday():0, ad:adClicked?1:0,
-        /* the ad they clicked, else the one on screen — but dark mode hides ads,
-           so don't count an impression that nobody could have seen */
-        adid:adClickedId||(document.documentElement.classList.contains("thm-dark")?"":window.x43ad)||"",
+        adid:adClickedId||window.x43ad||"",   /* the ad they clicked, else the one on screen */
         c:ct.c, so:ct.so});
     }
   }catch(e){}
