@@ -358,7 +358,7 @@ let cats=[], special="", slots=[], slots0=[], tiles={};
 let selection=[], solvedIdx=[], colorCat={}, locked=new Set();
 let mistakes=0, penalty=0, guesses=[], over=false, animating=false;
 let clicks=0;   /* tile taps that changed the selection (selects + deselects) */
-let debugStreak=0; /* streak-preview override (type s5/s10/s25/s50/s100) — never persisted */
+let debugStreak=0; /* streak-preview override (set from the test menu) — never persisted */
 let adClicked=false;   /* ad-click tracking (stats only — no points) */
 let adClickedId="";    /* which ad they tapped (for the stats beacon) */
 let startTime=0, solveMs=null; /* speed timer: starts on load, stops at the finish */
@@ -2002,24 +2002,9 @@ document.addEventListener("keydown",e=>{
     resetBuf=[]; resetPuzzle();
   }
 });
-/* ---------- streak-milestone preview: type s5 / s10 / s25 / s50 / s100 ----------
-   (anywhere outside a text field) — fakes a finished hub-first game with that
-   streak and opens the real results modal + share card. Nothing is saved:
-   refresh, or 5-tap the logo, to get the real board back. */
-let streakBuf="", streakTimer=null;
-document.addEventListener("keydown",e=>{
-  const t=e.target;
-  if(t&&(t.tagName==="INPUT"||t.tagName==="TEXTAREA")) return;
-  if(!/^[a-z0-9]$/i.test(e.key)){ streakBuf=""; return; }
-  streakBuf=(streakBuf+e.key.toLowerCase()).slice(-4);
-  clearTimeout(streakTimer);
-  /* short pause before matching so "s10" doesn't fire while typing "s100" */
-  streakTimer=setTimeout(()=>{
-    const m=streakBuf.match(/s(5|10|25|50|100)$/);
-    streakBuf="";
-    if(m) streakPreview(+m[1]);
-  },650);
-});
+/* streak-milestone preview (test menu): fakes a finished hub-first game with
+   that streak and opens the real results modal + share card. Nothing is saved:
+   refresh, or the menu's Reset, to get the real board back. */
 function streakPreview(n){
   if(!cats.length) return;
   debugStreak=n;
@@ -2037,19 +2022,58 @@ function resetPuzzle(){
   setupPlay();          /* rebuilds a fresh board; with progress cleared there's nothing to restore */
   toast("Puzzle reset 🔄");
 }
-/* mobile-friendly reset: tap the 4×3 logo 5 times quickly */
+/* ---------- hidden test menu ----------
+   7 quick logo taps ask for a code word. The word itself never appears in this
+   file — only its SHA-256 digest — so reading the source doesn't reveal it.
+   The right word opens a small menu of test tools (reset / perfect / streak
+   previews). Everything stays client-side and nothing persists. */
+const TEST_DIGEST="b3bc8722ffe7ea2f4308c0a596f02b49554767951f39b0595634e5917c5b1d2e";
 let logoTaps=0, logoTapTimer=null;
 (document.querySelector("header .logo")||document.querySelector("header"))
   ?.addEventListener("click",()=>{
     logoTaps++;
     clearTimeout(logoTapTimer);
-    logoTapTimer=setTimeout(()=>{ logoTaps=0; },1200); /* taps must come in quick succession */
-    if(logoTaps===5) resetPuzzle();                    /* 5 quick taps: fresh board (fires immediately) */
-    if(logoTaps>=10){ logoTaps=0; perfectPreview(); }  /* keep going to 10: preview a PERFECT game */
+    logoTapTimer=setTimeout(()=>{ logoTaps=0; },1500); /* taps must come in quick succession */
+    if(logoTaps>=7){ logoTaps=0; askTestCode(); }
   });
-/* logo ×10: fabricate the maximal ending — perfect, hub-first, reverse rainbow,
-   gold plaque (85s), Efficient — so the end screen's full drama can be tested
-   without playing. Like the s-codes, nothing is saved; refresh to recover. */
+async function askTestCode(){
+  const w=(prompt("")||"").trim().toLowerCase();
+  if(!w) return;
+  try{
+    const d=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(w));
+    const hex=[...new Uint8Array(d)].map(b=>b.toString(16).padStart(2,"0")).join("");
+    if(hex===TEST_DIGEST) openTestMenu();
+  }catch(e){}
+}
+function openTestMenu(){
+  let m=document.getElementById("testMenu");
+  if(!m){
+    m=document.createElement("div");
+    m.id="testMenu";
+    m.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:300;";
+    m.innerHTML="<div style='background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:8px;min-width:230px'>"+
+      "<b style='text-align:center'>Test tools \ud83e\uddea</b>"+
+      "<button data-t='reset'>Reset puzzle</button>"+
+      "<button data-t='perfect'>Perfect game</button>"+
+      "<div style='display:flex;gap:6px;justify-content:center'>"+
+        [5,10,25,50,100].map(x=>"<button data-t='s"+x+"' style='flex:1'>s"+x+"</button>").join("")+"</div>"+
+      "<button data-t='close'>Close</button></div>";
+    m.addEventListener("click",e=>{
+      const b=e.target.closest("[data-t]");
+      if(!b&&e.target!==m) return;             /* clicks inside the card do nothing */
+      m.style.display="none";
+      const t=b&&b.dataset.t;
+      if(t==="reset") resetPuzzle();
+      else if(t==="perfect") perfectPreview();
+      else if(t&&/^s\d+$/.test(t)) streakPreview(+t.slice(1));
+    });
+    document.body.appendChild(m);
+  }
+  m.style.display="flex";
+}
+/* perfect preview: fabricate the maximal ending — perfect, hub-first, reverse
+   rainbow, gold plaque (85s), Efficient — so the end screen's full drama can
+   be tested without playing. Nothing is saved; refresh to recover. */
 function perfectPreview(){
   if(!cats.length) return;
   guesses=REV_RAINBOW.map(ci=>[special,cats[ci].words[0],cats[ci].words[1]]);
