@@ -2023,11 +2023,10 @@ function resetPuzzle(){
   toast("Puzzle reset 🔄");
 }
 /* ---------- hidden test menu ----------
-   7 quick logo taps ask for a code word. The word itself never appears in this
-   file — only its SHA-256 digest — so reading the source doesn't reveal it.
-   The right word opens a small menu of test tools (reset / perfect / streak
-   previews). Everything stays client-side and nothing persists. */
-const TEST_DIGEST="b3bc8722ffe7ea2f4308c0a596f02b49554767951f39b0595634e5917c5b1d2e";
+   7 quick logo taps ask for a code word. The word lives in a server-side
+   secret — this file contains NOTHING checkable offline (a hash here lasted
+   about an hour in the wild). The right word opens a small menu of test tools
+   (reset / perfect / streak previews); all client-side, nothing persists. */
 let logoTaps=0, logoTapTimer=null;
 (document.querySelector("header .logo")||document.querySelector("header"))
   ?.addEventListener("click",()=>{
@@ -2040,9 +2039,10 @@ async function askTestCode(){
   const w=(prompt("")||"").trim().toLowerCase();
   if(!w) return;
   try{
-    const d=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(w));
-    const hex=[...new Uint8Array(d)].map(b=>b.toString(16).padStart(2,"0")).join("");
-    if(hex===TEST_DIGEST) openTestMenu();
+    const r=await fetch("https://fourbythree-stats.hankmt.workers.dev/testcode",{
+      method:"POST",headers:{"Content-Type":"text/plain"},body:JSON.stringify({w})});
+    const j=await r.json();
+    if(j&&j.ok) openTestMenu();
   }catch(e){}
 }
 function openTestMenu(){
