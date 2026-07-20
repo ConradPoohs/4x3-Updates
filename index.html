@@ -1655,7 +1655,10 @@ function runModalTally(score){
   function bump(v,big){ const from=cur; const o={v:from}; cur=v;
     G.to(o,{v:v,duration:.45,ease:"power1.out",onUpdate:()=>{c.textContent=Math.round(o.v);}});
     G.fromTo(c,{scale:big?1.5:1.26},{scale:1,duration:big?.7:.45,ease:"elastic.out(1,.5)"});
-    G.fromTo(c,{color:(v>=from?"#56b870":"#d05b5b")},{color:"#2b2620",duration:.6,ease:"power2.out"}); }
+    /* settle back to the CURRENT theme's ink (was hardcoded light-mode near-
+       black, which left the counter invisible in dark mode after one pulse) */
+    const ink=getComputedStyle(document.documentElement).getPropertyValue("--ink").trim()||"#2b2620";
+    G.fromTo(c,{color:(v>=from?"#56b870":"#d05b5b")},{color:ink,duration:.6,ease:"power2.out"}); }
   const STEP=0.5; let time=0.45, acc=0;
   const tl=G.timeline({onComplete:()=>{
     G.fromTo(c,{scale:1.16},{scale:1,duration:.7,ease:"elastic.out(1,.4)"});
