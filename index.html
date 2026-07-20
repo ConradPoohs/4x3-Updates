@@ -961,6 +961,18 @@ function pollEmoji(){
 /* hover-for-definition copy (BETA) — only puzzles listed here get tooltips on the
    finished answer list, keyed by hub word then exact category name */
 const DEFS={
+  BIRD:{
+    "British Slang for a Woman":{LASS:"What a Yorkshireman calls a young woman.",GAL:"An old-fashioned, friendly way to say girl.",BIRD:"A bloke might call his girlfriend this."},
+    "They Fly":{BAT:"The only mammal capable of true powered flight.",FLY:"This buzzing pest is named for exactly what it does.",BIRD:"Feathers, hollow bones, and a lifetime of free air travel."},
+    "NBA Legends":{JORDAN:"His Airness, six championships with the Bulls.",CURRY:"Steph, the greatest three-point shooter of all time.",BIRD:"Larry Legend, pride of the Boston Celtics."},
+    "Things You Might Flip":{PANCAKE:"Breakfast that gets tossed when one side turns golden.",COIN:"Call heads or tails while it is still in the air.",BIRD:"The rudest thing you can do with your middle finger."}
+  },
+  BOOK:{
+    "Reserve in Advance":{SCHEDULE:"To set a time for something before it happens.",ARRANGE:"To set things up ahead of time so the day goes smoothly.",BOOK:"What you do to a table, a flight, or a hotel room before you show up."},
+    "Criminal Justice Actions":{ARREST:"To take a suspect into custody.",INDICT:"To formally accuse someone of a specific crime.",BOOK:"To process a suspect at the station, fingerprints and mugshot included."},
+    "Things with Spines":{CACTUS:"A desert plant you should not hug.",PORCUPINE:"A rodent whose quills make it very unpopular with curious dogs.",BOOK:"Its spine faces out on the shelf so you can read the title."},
+    "A Wide Variety of Clubs":{FIGHT:"The first rule is that you do not talk about it.",COUNTRY:"A members-only spot for golf, tennis, and long lunches.",BOOK:"A group that meets monthly to discuss what everyone was supposed to read."}
+  },
   CORNER:{
     "Where Lines Meet":{ANGLE:"The figure formed when two rays share an endpoint, measured in degrees.",VERTEX:"The exact point where two lines or edges come together.",CORNER:"The spot where two walls, streets, or edges meet."},
     "Out of the Way Spots":{NOOK:"A small sheltered recess, ideal for breakfast or a good book.",CRANNY:"A narrow crack or crevice, famously searched along with every nook.",CORNER:"A quiet tucked-away spot, like the table nobody can see from the door."},
@@ -1140,6 +1152,54 @@ const DEFS={
     "Meaning Last":{ULTIMATE:"The very last in a sequence, not merely the best.",CLOSING:"Coming at the very end, as in closing remarks.",FINAL:"Last, with nothing at all after it."},
     "Not Up for Debate":{BINDING:"Legally locked in, and you are stuck with it.",CONCLUSIVE:"Settling the matter beyond any remaining doubt.",FINAL:"The decision stands and there is no appeal."},
     "Today, in Three Words":{WORLD:"Every nation on the planet had a shot at this one.",CUP:"The solid gold trophy the winners get to lift.",FINAL:"Today's game."}
+  },
+  CHAIN:{
+    "Ways to Restrain":{SHACKLE:"A metal cuff that locks around the wrists or ankles.",LEASH:"A strap for keeping a dog close.",CHAIN:"Heavy metal links used to bind or tether."},
+    "A ___ of Unfortunate Events":{SEQUENCE:"One thing following another in a set order.",SERIES:"A run of connected things (and the one Lemony Snicket went with).",CHAIN:"A linked run of events, each one triggering the next."},
+    "Mountain Formations":{RANGE:"A connected row of peaks, like the Rockies.",SIERRA:"A rugged line of jagged mountains, like the Nevada or Madre.",CHAIN:"A long, linked stretch of mountains."},
+    "___ Saw":{JIG:"A blade that cuts curves, or a boxed picture cut into puzzle pieces.",SEE:"A plank that tips two riders up and down on the playground.",CHAIN:"A motorized loop of teeth that rips straight through a log."}
+  },
+  STRAIN:{
+    "Musculoskeletal Injury":{SPRAIN:"A stretched or torn ligament, most often at the ankle.",PULL:"A minor muscle tear from overdoing it.",STRAIN:"An overstretched muscle or tendon."},
+    "Psychological Weights":{TENSION:"A tight, anxious pressure that will not let up.",STRESS:"The wear of too many demands at once.",STRAIN:"The toll of being stretched past your limits."},
+    "Forms of a Virus":{SUBTYPE:"A finer classification within a viral type, like H1N1.",VARIANT:"A mutated version, like Delta or Omicron.",STRAIN:"A distinct genetic line of a virus."},
+    "Ways to Separate a Mixture":{CENTRIFUGE:"Spin it fast so the heavier parts fling to the bottom.",DISTILL:"Boil it off and recapture the vapor to purify it.",STRAIN:"Pour it through a mesh to catch the solids."}
+  },
+  SHINE:{
+    "To Cast Light":{GLEAM:"To give off a soft, steady glow.",GLISTEN:"To sparkle with reflected light, like wet pavement.",SHINE:"To beam out light of your own."},
+    "To Dazzle!":{STAR:"To be the standout that everyone watches.",EXCEL:"To do something better than everyone around you.",SHINE:"To perform brilliantly and get noticed."},
+    "Rise and Shine!":{RISE:"Get yourself up out of bed.",AND:"The joining word.",SHINE:"A conclusion of a cheery morning call."},
+    "Homemade Liquor":{HOOCH:"Slang for cheap, illicit booze.",ROTGUT:"Harsh, low-grade liquor that burns going down.",SHINE:"Slang for the moonshine of a backwoods still."}
+  },
+  FLY:{
+    "Lil Bugs":{GNAT:"A tiny lil guy that swarms around your face.",ANT:"A little six-legged worker from the colony.",FLY:"The buzzing pest that always landing on your food."},
+    "'90s Slang for Cool":{DOPE:"Awesome and/or excellent.",FRESH:"Stylish and new.",FLY:"Effortlessly cool (and probably good-looking.)"},
+    "Pant Parts":{INSEAM:"The seam running down the inside of the leg.",CUFF:"The folded hem at the bottom of the leg.",FLY:"The zippered opening at the front (AKA the Barn Door)"},
+    "Fishing Lures":{SPINNER:"A lure with a blade that whirls to flash and vibrate.",SPOON:"A curved metal lure that wobbles and flashes like a fleeing minnow.",FLY:"A feather-light lure tied to imitate an insect."}
+  },
+  AIR:{
+    "Classical Elements":{EARTH:"The solid, grounded member of the ancient elemental foursome.",FIRE:"The hot and hungry one of the four classical elements.",AIR:"The classical element you're breathing right now."},
+    "To Broadcast a Show":{STREAM:"To send a show out live over the internet.",TELEVISE:"To put an event on TV for everyone to watch.",AIR:"What a network does to an episode when it finally lets you see it."},
+    "Someone's Vibe":{AURA:"The invisible energy a person seems to radiate.",DEMEANOR:"A person's outward manner and bearing.",AIR:"A distinctive quality someone carries, as in one of mystery."},
+    "Invisible but All Around You":{WIFI:"Wireless internet, filling the room with data you cannot see.",GRAVITY:"The force quietly sticking you to the planet at all times.",AIR:"You can't see it, but you'd notice pretty fast if it left."}
+  },
+  TOUR:{
+    "Today's Bike Race, in Three Words":{DE:"The Tour de France is probably the world's most famous bike race.",FRANCE:"The race is three weeks long and crosses much of France.",TOUR:"The competitors roll into Paris today!"},
+    "Guided Getaways":{CRUISE:"A vacation on a very large boat (usually with a very large buffet.)",SAFARI:"An expedition to observe wild animals.",TOUR:"A guided trip with an itinerary, a bus, and possibly someone holding a little flag."},
+    "A Stretch of Service":{STINT:"A fixed period spent doing one particular job or duty.",HITCH:"Slang for a single term of military enlistment.",TOUR:"One deployment's worth of service, as in a stretch of duty overseas."},
+    "Chess Pieces, in French":{FOU:"The bishop in French chess, whose name literally means \"the madman.\"",DAME:"The most powerful piece on a French chessboard, known to us as the queen.",TOUR:"What French players call the rook, because it looks like a tower."}
+  },
+  MANUAL:{
+    "An Instruction Book":{HANDBOOK:"A compact book of the essentials on a subject.",GUIDE:"A book that walks you through a place or a task.",MANUAL:"The little book you ignore until something breaks."},
+    "Skateboard Tricks":{GRIND:"Sliding the board's trucks along a rail or ledge.","540":"A one-and-a-half full spin off a ramp.",MANUAL:"Rolling along balanced on just the back two wheels."},
+    "Car Transmission Types":{AUTOMATIC:"Shifts its own gears while you just steer.",CVT:"A belt-driven gearbox with no fixed gears at all.",MANUAL:"The kind with a clutch pedal and a stick you shift yourself."},
+    "___ Labor":{HARD:"A prison sentence served with grueling physical work.",ORGANIZED:"Workers banded together into unions.",MANUAL:"Work done with your hands and back, not a machine."}
+  },
+  CURRENT:{
+    "Up to Date":{MODERN:"Belonging to the present, not the past.",RECENT:"Having happened only a little while ago.",CURRENT:"Happening or existing right now."},
+    "Electrical Properties":{CHARGE:"The stored electrical quantity, positive or negative.",POWER:"The rate energy is used, measured in watts.",CURRENT:"The flow of electrons through a wire, measured in amps."},
+    "Misspelled Dried Fruits":{RAYSIN:"A raisin is a dried grape.",PROON:"The prune is a dried plum.",CURRENT:"The currant is a specific dried grape."},
+    "Rivers Have These":{EDDY:"A little swirl where the water spins back on itself.",FISH:"The swimmers an angler is hoping to hook.",CURRENT:"The steady flow that carries you downstream."}
   }
 };
 /* post-game easter egg: tap the hub to press it in and burst out emojis */
