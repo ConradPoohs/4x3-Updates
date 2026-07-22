@@ -23,6 +23,11 @@
   /* ===== dark mode ===== light stays pixel-identical; these only take effect
      when <html> has class "dark" (explicit) or the OS prefers dark and the user
      hasn't forced light. The var block is intentionally duplicated verbatim. */
+  /* tell the engine which scheme is in effect: without this, WebKit renders
+     native form controls (buttons, inputs) with LIGHT UA chrome in dark mode
+     until a repaint — the "white buttons until first click" report */
+  :root{color-scheme:light;}
+  html.thm-dark{color-scheme:dark;}
   html.dark{
     --ink:#e8e8e8; --paper:#121212; --card:#1e1e1e; --line:#3a3a3a; --bad:#cf6679;
     --mut:#a3a3a3; --mut2:#8c8c8c; --mut3:#969696; --mut4:#c6c6c6; --mut5:#a3a3a3;

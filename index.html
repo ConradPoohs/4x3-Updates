@@ -258,7 +258,7 @@
     <div id="crate" style="display:none" class="card fb">
       <b id="crateTitle">Rate this puzzle</b>
       <div class="stars" id="crateStars" style="margin-top:10px"></div>
-      <a id="crateReport" href="#" style="display:inline-block;margin-top:8px;font-size:13px;color:var(--mut)" onclick="reportCommunity();return false">Report this puzzle</a>
+      <a id="crateReport" href="#" style="display:inline-block;margin-top:22px;font-size:12px;color:var(--mut2);opacity:.8" onclick="reportCommunity();return false">Report this puzzle</a>
     </div>
   </div>
 
@@ -543,13 +543,27 @@ window.addEventListener("pageshow",e=>{ if(e.persisted) checkNewDay(); });
 function gameKey(){
   return (dailyKey&&dailyKey===todayStr()&&!isBeta&&!isPreview) ? "x43_game_"+dailyKey : null;
 }
+/* some privacy modes block localStorage entirely — every save silently fails
+   and a refresh hands back full lives. We can't fix their browser, but we can
+   say so once instead of pretending progress is being kept. */
+let storageOk=true;
+try{ localStorage.setItem("x43_probe","1"); localStorage.removeItem("x43_probe"); }
+catch(e){ storageOk=false;
+  setTimeout(()=>{ try{ toast("Heads up: this browser mode can't save progress or streaks."); }catch(_){} },2500);
+}
 function loadGame(){
   const k=gameKey(); if(!k) return null;
   try{ return JSON.parse(localStorage.getItem(k)||"null"); }catch(e){ return null; }
 }
 function saveGame(){
   const k=gameKey(); if(!k) return;
-  try{ localStorage.setItem(k,JSON.stringify({v:1,s:special,slots0,slots,sel:selection,solved:solvedIdx,m:mistakes,p:penalty,g:guesses,over,t0:startTime,sms:solveMs,ad:adClicked?1:0,adi:adClickedId,ck:clicks})); }catch(e){}
+  const payload=JSON.stringify({v:1,s:special,slots0,slots,sel:selection,solved:solvedIdx,m:mistakes,p:penalty,g:guesses,over,t0:startTime,sms:solveMs,ad:adClicked?1:0,adi:adClickedId,ck:clicks});
+  try{ localStorage.setItem(k,payload); }
+  catch(e){
+    /* quota? the share-card JPEG cache is the only big regenerable thing we
+       own — drop it and try once more so game state always wins the fight */
+    try{ localStorage.removeItem("x43_cards"); localStorage.setItem(k,payload); }catch(e2){}
+  }
 }
 /* Rebuild the board state from a saved game, no animations, without
    re-counting stats (those were tallied once, on the real finish). */
@@ -1308,8 +1322,14 @@ function hubPop(){
     } else { e.remove(); }
   }
 }
+let pendingTap=null;
+function flushPendingTap(){
+  const p=pendingTap; pendingTap=null;
+  if(p&&!over&&!animating&&!locked.has(p)&&tiles[p]) tapWord(p);
+}
 function tapWord(w){
   if(over){ if(w===special){ hubPop(); hubSmashed(); } return; }   /* finished board: hub is an emoji button */
+  if(animating&&!locked.has(w)){ pendingTap=w; return; }   /* taps mid-animation queue instead of vanishing */
   if(animating||locked.has(w)) return;
   const i=selection.indexOf(w);
   if(i>=0) selection.splice(i,1);
@@ -1377,6 +1397,9 @@ function submitGuess(){
   else wrongAnim(sel,oneAway);
 }
 function solveAnim(ci,sel){
+  /* the 4th solve ENDS the game: stop the clock at the press, not after the
+     ~1.3s landing animation (players watched themselves tick past medal cuts) */
+  if(solvedIdx.length===3&&solveMs===null) solveMs=Date.now()-startTime;
   animating=true; updateButtons();
   selection=[];
   const after=()=>{
@@ -1404,7 +1427,7 @@ function solveAnim(ci,sel){
     } else {
       /* board state is already committed — the glide is purely visual, so unlock
          now instead of ~1.3s later (players want to re-tap the hub right away) */
-      animating=false; updateButtons();
+      animating=false; updateButtons(); flushPendingTap();
     }
   };
   if(G){
@@ -1424,7 +1447,7 @@ function wrongAnim(sel,oneAway){
      On the fatal third, mark the game over in the save too, so a reload during
      the shake restores a finished loss instead of a resurrectable board. */
   selection=[];
-  if(mistakes>=MAXM) over=true;
+  if(mistakes>=MAXM){ over=true; if(solveMs===null) solveMs=Date.now()-startTime; } /* clock stops at the fatal press too */
   saveGame();
   toast(oneAway?"One away!":"Nope.");
   if(G){
@@ -1438,7 +1461,7 @@ function wrongAnim(sel,oneAway){
         .to(inn,{x:-4,duration:.1,ease:"sine.inOut"})
         .to(inn,{x:0,duration:.09,ease:"sine.out"});
     });
-    setTimeout(()=>{animating=false; selection=[]; paintTiles(); updateButtons(); renderMist(); saveGame();
+    setTimeout(()=>{animating=false; selection=[]; paintTiles(); updateButtons(); renderMist(); saveGame(); flushPendingTap();
       if(mistakes>=MAXM) endGame(false);},560);
   } else {
     selection=[]; paintTiles(); updateButtons(); renderMist(); saveGame();
@@ -2117,6 +2140,13 @@ function resetPuzzle(){
 let logoTaps=0, logoTapTimer=null;
 (document.querySelector("header .logo")||document.querySelector("header"))
   ?.addEventListener("click",()=>{
+    /* on an archive / community / beta board, the logo is the way home to
+       today's puzzle (sub-pages' logos already link back) */
+    if(isBeta||communityId||(dailyKey&&dailyKey!==todayStr())){
+      try{ history.replaceState(null,"",location.pathname+location.search); }catch(e){}
+      location.reload();
+      return;
+    }
     logoTaps++;
     clearTimeout(logoTapTimer);
     logoTapTimer=setTimeout(()=>{ logoTaps=0; },1500); /* taps must come in quick succession */
@@ -2693,6 +2723,8 @@ function rateCommunity(stars){
 }
 function reportCommunity(){
   if(crateDone) return;
+  /* reports auto-hide a board at 3 — never let one land from a stray thumb */
+  if(!confirm("Report this puzzle as inappropriate or broken?")) return;
   crateDone=true;
   const anon=hgAnon();
   if(anon&&communityId){

@@ -47,10 +47,17 @@ async function renderArchive(){
     return;
   }
   el.innerHTML="";
+  /* this browser's results (daily + archive replays) live in x43_history —
+     show them so people can see what they've played and how it went */
+  let hist={}; try{ hist=JSON.parse(localStorage.getItem("x43_history")||"{}"); }catch(e){}
   keys.forEach(k=>{
     const b=document.createElement("button");
+    const h=hist[k];
+    const played=h?("<b style='color:"+(h.w?"var(--good)":"var(--bad)")+"'>"+(h.w?"✓":"✗")+"</b> "+
+      (h.s|0)+" pts"):"";
+    const tag=(k===today)?("Today"+(played?" · "+played:"")):played;
     b.innerHTML="<span>"+esc(fmtDate(k))+"</span>"+
-      "<span class='when'>"+(k===today?"Today":"")+"</span>";
+      "<span class='when'>"+tag+"</span>";
     b.onclick=()=>{ location.href="index.html#d="+k; };
     el.appendChild(b);
   });
