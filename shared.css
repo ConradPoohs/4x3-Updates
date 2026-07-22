@@ -530,6 +530,14 @@
   .a11y-opt{display:flex; align-items:center; gap:9px; padding:7px 6px; border-radius:8px; font-size:14px; cursor:pointer;}
   .a11y-opt:hover{background:var(--soft);}
   .a11y-opt input{width:18px; height:18px; flex:none; cursor:pointer;}
+  /* "Move my data" section at the bottom of the Settings menu */
+  .a11y-xfer{border-top:1.5px solid var(--line); margin-top:8px; padding-top:9px; max-width:210px;}
+  .a11y-xfer button{display:block; width:100%; margin-top:6px; padding:7px 10px; border-radius:9px;
+    border:1.5px solid var(--line); background:var(--card); color:var(--ink);
+    font-size:13px; font-weight:600; cursor:pointer;}
+  .a11y-xfer button:hover{background:var(--soft);}
+  #xferMsg{font-size:12px; color:var(--mut); margin-top:7px; line-height:1.45; overflow-wrap:break-word;}
+  .a11y-xcode{font-size:19px; letter-spacing:3px; color:var(--ink); font-variant-numeric:tabular-nums;}
   .a11y-opt:focus-within{box-shadow:0 0 0 2px var(--paper),0 0 0 4px #1f6feb;}
 
   /* ---------- a11y: reduced motion (kills CSS animation/transition; JS gates GSAP) ---------- */

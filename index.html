@@ -961,6 +961,24 @@ function pollEmoji(){
 /* hover-for-definition copy (BETA) — only puzzles listed here get tooltips on the
    finished answer list, keyed by hub word then exact category name */
 const DEFS={
+  TRIM:{
+    "To Cut Back":{PRUNE:"To snip dead branches so a plant grows fuller.",PARE:"To peel or whittle down, like an apple or a budget.",TRIM:"To take a little off the top and tidy the edges."},
+    "Fit and Toned":{LEAN:"Lithe and muscular, with no extra weight.",SVELTE:"Elegantly slender.",TRIM:"In good shape, neat and compact of build."},
+    "To Decorate":{ADORN:"To dress up with lovely finishing touches.",DECK:"To festoon, as one does the halls in December.",TRIM:"To hang the lights and baubles on the tree."},
+    "Things You Do to a Sail":{REEF:"To shorten sail when the wind gets pushy. Not the coral kind.",FURL:"To roll it up snug against the mast or boom.",TRIM:"To adjust the sheets until the wind fills it just right."}
+  },
+  HAIR:{
+    "Barely a Win":{NOSE:"The margin a racehorse wins by in a photo finish.",WHISKER:"A hair's breadth; about as close as a contest gets.",HAIR:"Win by a hair and you have barely edged them out."},
+    "___ Cut":{CREW:"A very short, no-nonsense military style.",COLD:"A slice of deli meat.",HAIR:"A trip to the barber for a trim."},
+    "Body Parts Made of Keratin":{NAIL:"The hard shield at your fingertip, filed and polished.",HORN:"A rhino's iconic point is pure compacted keratin.",HAIR:"The stuff on your head, made of the same protein as a hoof."},
+    "First Four Letters of a Musical":{CHIC:"Trim the last four letters off razzle-dazzle Chicago.",WICK:"Behold, what is left when Wicked loses its ending.",HAIR:"What remains after Hairspray loses its spray."}
+  },
+  REP:{
+    "Slang for Reputation":{CRED:"Short for credibility, the respect you have earned.",CLOUT:"Influence and social pull, especially the kind people chase online.",REP:"What precedes you, for better or worse."},
+    "Weight Room Words":{SET:"A group of repetitions done back to back before you rest.",SPOT:"To stand ready to catch the bar for a struggling lifter.",REP:"One complete lift, from start to finish. Now do it again."},
+    "To Wear with Pride":{ROCK:"To pull off an outfit with total confidence.",SPORT:"To show off a new look, like a fresh mustache.",REP:"Short for \"represent.\" To proudly carry your city, your team, or your crew."},
+    "Political Parties":{DEM:"The donkey party, for short.",GREEN:"The party whose whole platform is the planet.",REP:"The elephant party, for short."}
+  },
   BIRD:{
     "British Slang for a Woman":{LASS:"What a Yorkshireman calls a young woman.",GAL:"An old-fashioned, friendly way to say girl.",BIRD:"A bloke might call his girlfriend this."},
     "They Fly":{BAT:"The only mammal capable of true powered flight.",FLY:"This buzzing pest is named for exactly what it does.",BIRD:"Feathers, hollow bones, and a lifetime of free air travel."},
@@ -1677,7 +1695,7 @@ function tallyItems(cs){
   if(cs.rainbow) it.push(["🏳️‍🌈","Rainbow — yellow → green → blue → purple",0]);
   if(cs.grellow) it.push(["🎾","Grellow — purple → blue → yellow → green",0]);
   if(cs.grue) it.push(["🦚","Grue — purple → green → blue → yellow",0]);
-  if(cs.godDamnit) it.push(["😤","God Damnit! — perfect but for one swap",0]);
+  if(cs.godDamnit) it.push(["😤","Frik! — perfect but for one swap",0]);
   if(cs.dayBefore) it.push(["🌙","The Day Before — played 12–1am",0]);
   if(cs.megaClicks) it.push(["🖲️","Click Happy — "+clicks+" clicks. Why?",0]);
   if(cs.smusher) it.push(["🥞","Smusher — you've played SMUSH!",0]);
@@ -2289,7 +2307,7 @@ function drawShareCard(){
     }:{
       g0:"#f0a79c",g1:"#d65f50",g2:"#b83b2c",g3:"#86251b",hi:"rgba(255,236,230,.7)",grv:"rgba(86,18,10,.5)",
       eL:"rgba(255,238,232,.5)",eD:"rgba(70,14,8,.5)",eF:"#7a2418",sD:"rgba(70,14,8,.6)",sL:"rgba(255,238,232,.5)",
-      title:"God Damnit!"
+      title:"Frik!"
     };
     x.save(); rr(x,0,0,W,H,R); x.clip();
     const mg=x.createLinearGradient(0,0,W*0.5,H);

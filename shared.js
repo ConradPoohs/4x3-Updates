@@ -88,7 +88,7 @@ function scoringHTML(brag){
       note("🌈 Rainbow","Solve yellow → green → blue → purple")+
       note("🎾 Grellow","Solve purple → blue → yellow → green")+
       note("🦚 Grue","Solve purple → green → blue → yellow")+
-      note("😤 God Damnit!","A perfect run (no mistakes + Hub First) ruined only by a green↔yellow or green↔blue swap")+
+      note("😤 Frik!","A perfect run (no mistakes + Hub First) ruined only by a green↔yellow or green↔blue swap")+
       note("🌙 The Day Before","Play the day's puzzle between midnight and 1 am")+
       note("🖲️ Click Happy","Win after "+MEGA_CLICKS+"+ clicks. Why?")+
       note("✦ Streak milestones","A special banner — here and on your share card — the day your streak hits "+STREAK_MILESTONES.join(", ")+": silver at 5 and 10, gold from 25 up")+
@@ -187,7 +187,13 @@ function buildA11yMenu(){
      can't use opt()'s "A11Y[k] is truthy" rule. Build it explicitly, first. */
   const dkChecked=(A11Y.dk!==undefined)?!!A11Y.dk:!!(window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches);
   const dkOpt="<label class='a11y-opt'><input type='checkbox' data-k='dk'"+(dkChecked?" checked":"")+"><span>Dark mode</span></label>";
-  menu.innerHTML=dkOpt+opt("rm","Reduced motion")+opt("hc","High contrast")+opt("lc","Labeled colors")+opt("oc","One card color")+opt("bt","Bigger text")+opt("st","Show timer");
+  menu.innerHTML=dkOpt+opt("rm","Reduced motion")+opt("hc","High contrast")+opt("lc","Labeled colors")+opt("oc","One card color")+opt("bt","Bigger text")+opt("st","Show timer")+
+    "<div class='a11y-xfer'>"+
+      "<div class='a11y-h'>Move my data</div>"+
+      "<button type='button' id='xferGet'>Get a transfer code</button>"+
+      "<button type='button' id='xferUse'>I have a code</button>"+
+      "<div id='xferMsg'></div>"+
+    "</div>";
   const host=document.querySelector(".wrap")||document.body;   /* inside the column so it mirrors the streak */
   host.appendChild(btn); host.appendChild(menu);
   function setOpen(o){
@@ -211,5 +217,71 @@ function buildA11yMenu(){
   });
   document.addEventListener("click",()=>setOpen(false));
   document.addEventListener("keydown",e=>{ if(e.key==="Escape") setOpen(false); });
+
+  /* ---------- Move my data: one-time-code transfer between browsers ----------
+     Everything a player owns lives in localStorage (both games share this
+     origin, so 4×3 AND Smush move together). The blob is gzipped, base64'd
+     and parked on the Worker for 15 minutes behind a 6-char one-time code.
+     Secrets (dashboard/editor keys) and the regenerable share-card JPEG
+     cache never leave this browser. */
+  const XEP="https://fourbythree-stats.hankmt.workers.dev";
+  async function xferPack(){
+    const data={};
+    for(let i=0;i<localStorage.length;i++){
+      const k=localStorage.key(i);
+      if(!/^(x43_|smush_|hg_)/.test(k)) continue;
+      if(k==="x43_dashkey"||k==="smush_edkey"||k==="x43_cards") continue;
+      data[k]=localStorage.getItem(k);
+    }
+    const raw=new TextEncoder().encode(JSON.stringify(data));
+    let bytes=raw, tag="R";
+    if(window.CompressionStream){
+      const r=new Response(new Blob([raw]).stream().pipeThrough(new CompressionStream("gzip")));
+      bytes=new Uint8Array(await r.arrayBuffer()); tag="G";
+    }
+    let bin=""; bytes.forEach(b=>{ bin+=String.fromCharCode(b); });
+    return tag+btoa(bin);
+  }
+  async function xferUnpack(blob){
+    const gz=blob[0]==="G";
+    let bytes=Uint8Array.from(atob(blob.slice(1)),c=>c.charCodeAt(0));
+    if(gz){
+      if(!window.DecompressionStream) throw new Error("browser too old");
+      const r=new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip")));
+      bytes=new Uint8Array(await r.arrayBuffer());
+    }
+    return JSON.parse(new TextDecoder().decode(bytes));
+  }
+  const xmsg=()=>menu.querySelector("#xferMsg");
+  menu.querySelector("#xferGet").addEventListener("click",async()=>{
+    xmsg().textContent="Packing up your data…";
+    try{
+      const blob=await xferPack();
+      const r=await fetch(XEP+"/xfersave",{method:"POST",headers:{"Content-Type":"text/plain"},
+        body:JSON.stringify({blob})});
+      const j=await r.json();
+      if(j&&j.ok) xmsg().innerHTML="Your code: <b class='a11y-xcode'>"+j.code+"</b><br>"+
+        "On the other device: Settings → I have a code. Works once, expires in 15 minutes.";
+      else xmsg().textContent="Couldn't get a code just now — try again?";
+    }catch(e){ xmsg().textContent="Couldn't get a code just now — try again?"; }
+  });
+  menu.querySelector("#xferUse").addEventListener("click",async()=>{
+    const c=(prompt("Enter the transfer code from your other device:")||"").trim();
+    if(!c) return;
+    xmsg().textContent="Fetching…";
+    try{
+      const r=await fetch(XEP+"/xferget",{method:"POST",headers:{"Content-Type":"text/plain"},
+        body:JSON.stringify({code:c})});
+      const j=await r.json();
+      if(!j||!j.ok){ xmsg().textContent="Unknown or expired code."; return; }
+      const data=await xferUnpack(j.blob);
+      const n=Object.keys(data).length;
+      if(!n){ xmsg().textContent="That transfer was empty."; return; }
+      if(!confirm("Replace this browser's 4×3 + SMUSH data with the transferred copy?")){ xmsg().textContent=""; return; }
+      Object.keys(data).forEach(k=>{ try{ localStorage.setItem(k,data[k]); }catch(e){} });
+      xmsg().textContent="Done! Reloading…";
+      setTimeout(()=>location.reload(),600);
+    }catch(e){ xmsg().textContent="Transfer failed — try again?"; }
+  });
 }
 if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",buildA11yMenu); else buildA11yMenu();
