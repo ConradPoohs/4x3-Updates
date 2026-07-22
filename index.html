@@ -133,14 +133,31 @@
       }catch(e){}
       return false;
     }
+    /* current WIN streak, counted back from today (or yesterday if today's
+       daily isn't finished yet) — same rules as the game's streak counter */
+    function curStreak(){
+      try{
+        var h=JSON.parse(localStorage.getItem("x43_history"))||{};
+        var dn=function(k){ return Math.round(new Date(k+"T12:00:00").getTime()/86400000); };
+        var set={}; Object.keys(h).forEach(function(k){ if(h[k]&&h[k].rel!==0&&h[k].w!==0) set[dn(k)]=1; });
+        var d=new Date();
+        var today=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+        var x=dn(today); if(!set[x]) x--;
+        var c=0; while(set[x]){ c++; x--; }
+        return c;
+      }catch(e){ return 0; }
+    }
     function poolIds(socal){
       var n=playCount();
       var smushed=playedSmushToday();
+      var stk=curStreak();
       return ADS.filter(function(a){
         if(a.noRotate) return false;               /* dashboard-label-only entries */
+        if(a.sites!==undefined&&String(a.sites).indexOf("4x3")<0) return false;  /* not for this game */
         if(a.id==="smush"&&smushed) return false;  /* already converted today */
         if(a.socal&&!socal) return false;
         if(a.minPlays&&n<=a.minPlays) return false;
+        if(a.minStreak&&stk<a.minStreak) return false;   /* streak-gated (e.g. 4x6 beta invite) */
         return true;
       }).map(function(a){ return a.id; });
     }
