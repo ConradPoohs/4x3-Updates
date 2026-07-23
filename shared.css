@@ -285,6 +285,22 @@
   .cs-kicker{font-size:11.5px; font-weight:700; letter-spacing:.16em; text-transform:uppercase;
     color:var(--ink); border-bottom:2px solid var(--ink); padding-bottom:7px;}
   .cs-sub{font-size:13px; color:var(--mut); margin:8px 0 2px; font-variant-numeric:tabular-nums;}
+  /* stats pager chrome */
+  .cs-page{min-height:150px;}
+  .cs-navrow{display:flex; align-items:center; justify-content:center; gap:14px; margin-top:12px;}
+  .cs-arrow{width:30px; height:30px; border-radius:50%; border:1.5px solid var(--line);
+    background:var(--card); color:var(--mut); font-size:17px; line-height:1; cursor:pointer;}
+  .cs-arrow:hover{background:var(--soft); color:var(--ink);}
+  .cs-dots{display:inline-flex; gap:7px;}
+  .cs-dots i{width:7px; height:7px; border-radius:50%; background:var(--line); display:inline-block;}
+  .cs-dots i.on{background:var(--mut4);}
+  .cs-trio{margin-left:auto; font-size:12px; color:var(--mut); white-space:nowrap; font-variant-numeric:tabular-nums;}
+  .dotc{display:inline-block; width:9px; height:9px; border-radius:3px; margin-right:6px; vertical-align:baseline;}
+  .cs-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:8px 14px; margin-top:4px;}
+  .cs-stat{display:flex; flex-direction:column; padding:8px 10px; background:var(--card2);
+    border:1px solid var(--rule); border-radius:10px;}
+  .cs-stat b{font-size:19px; color:var(--ink); font-variant-numeric:tabular-nums;}
+  .cs-stat span{font-size:11px; color:var(--mut3); text-transform:uppercase; letter-spacing:.04em;}
   .cs-note{font-size:14px; color:var(--mut); margin:12px 0 4px; line-height:1.55;}
   .cs-diff{display:flex; align-items:center; gap:10px; margin:14px 0 2px; font-size:14px;}
   .cs-diff b{font-weight:700;}
