@@ -379,6 +379,35 @@ let debugStreak=0; /* streak-preview override (set from the test menu) — never
 let adClicked=false;   /* ad-click tracking (stats only — no points) */
 let adClickedId="";    /* which ad they tapped (for the stats beacon) */
 let startTime=0, solveMs=null; /* speed timer: starts on load, stops at the finish */
+/* crowd-defined difficulty: catPerm[displayIdx] = authored category index.
+   Identity until /dorder says otherwise; locked into the day's save so the
+   board never re-shuffles under a returning player. Telemetry and the
+   community-stats panel always translate back to AUTHORED indices so the
+   measurement can't feed on its own output. */
+let catPerm=[0,1,2,3];
+function applyCatOrder(perm){
+  if(!Array.isArray(perm)||perm.length!==4) return;
+  if(perm.slice().sort().join("")!=="0123") return;      /* must be a permutation */
+  if(perm.join("")==="0123") return;                     /* identity: nothing to do */
+  puzzle={...puzzle, c:perm.map(i=>puzzle.c[i])};
+  catPerm=perm.slice();
+}
+async function applyCrowdOrder(){
+  if(!dailyKey||isBeta||communityId) return;
+  /* a board already in progress keeps the ordering it started with */
+  try{
+    const sv=JSON.parse(localStorage.getItem("x43_game_"+dailyKey)||"null");
+    if(sv){ if(Array.isArray(sv.perm)) applyCatOrder(sv.perm); return; }
+  }catch(e){}
+  try{
+    const ctl=new AbortController();
+    const tm=setTimeout(()=>ctl.abort(),900);            /* never hold the game hostage */
+    const r=await fetch("https://fourbythree-stats.hankmt.workers.dev/dorder?p="+dailyKey,{signal:ctl.signal});
+    clearTimeout(tm);
+    const j=await r.json();
+    if(j&&j.ok&&Array.isArray(j.order)) applyCatOrder(j.order);
+  }catch(e){}                                            /* authored order is always a fine fallback */
+}
 let hubEmoji=null; /* emoji that bursts from the hub on the post-win tap (custom puzzles carry their own) */
 const MAXM=3;
 let fb={diff:0,fun:0,special:""};
@@ -478,6 +507,7 @@ async function init(){
     }catch(e){}
   }
   if(!puzzle) puzzle=DEMO;
+  await applyCrowdOrder();
   setupPlay();
   showView("play");
 }
@@ -574,7 +604,7 @@ function loadGame(){
 }
 function saveGame(){
   const k=gameKey(); if(!k) return;
-  const payload=JSON.stringify({v:1,s:special,slots0,slots,sel:selection,solved:solvedIdx,m:mistakes,p:penalty,g:guesses,over,t0:startTime,sms:solveMs,ad:adClicked?1:0,adi:adClickedId,ck:clicks});
+  const payload=JSON.stringify({v:1,s:special,slots0,slots,sel:selection,solved:solvedIdx,m:mistakes,p:penalty,g:guesses,over,t0:startTime,sms:solveMs,ad:adClicked?1:0,adi:adClickedId,ck:clicks,perm:catPerm});
   try{ localStorage.setItem(k,payload); }
   catch(e){
     /* quota? the share-card JPEG cache is the only big regenerable thing we
@@ -1892,7 +1922,8 @@ function showCommStats(){
     const meter="<span class='cs-meter'>"+[1,2,3,4].map(i=>"<i"+(i<=dfill?" class='on'":"")+"></i>").join("")+"</span>";
     /* first category solved — real names, real colours, sorted most-first first */
     const firsts=[0,1,2,3].map(i=>({i,n:d["f"+i]||0})).sort((a,b)=>b.n-a.n);
-    const firstRows=firsts.map(f=>csBarRow(cats[f.i].name,COLORS[f.i],f.n,d.ordn||0,false)).join("");
+    const firstRows=firsts.map(f=>{ const di=catPerm.indexOf(f.i);   /* authored → this player's colours */
+      return csBarRow(cats[di].name,COLORS[di],f.n,d.ordn||0,false); }).join("");
     /* mistakes distribution, with the player's own bucket marked */
     const myBucket=(mistakes>=MAXM)?3:mistakes;
     const mist=[["Flawless","m0"],["One mistake","m1"],["Two mistakes","m2"],["Didn’t finish","m3"]];
@@ -2841,7 +2872,9 @@ function recordHistory(){
       x43beacon({p:dailyKey, rel:(dailyKey===todayStr())?1:0, w:cs2.won?1:0,
         m:mistakes, s:cs2.score, ms:solveMs, st:cs2.won?streakWithToday():0, ad:adClicked?1:0,
         adid:adClickedId||window.x43ad||"",   /* the ad they clicked, else the one on screen */
-        c:ct.c, so:ct.so});
+        /* translate display→authored so crowd measurement stays unbiased */
+        c:(()=>{const a=[0,0,0,0]; ct.c.forEach((v,di)=>{a[catPerm[di]]=v;}); return a;})(),
+        so:ct.so.map(di=>catPerm[di])});
     }
   }catch(e){}
   /* cache a COMPACT preview for the history lightbox — a downscaled JPEG, NOT the full
