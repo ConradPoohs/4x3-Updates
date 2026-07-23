@@ -373,7 +373,7 @@ let loadedDay=null, pendingKey=null, isPreview=false;
 let puzzleData=null; /* last good puzzles.json, reused by the archive */
 let cats=[], special="", slots=[], slots0=[], tiles={};
 let selection=[], solvedIdx=[], colorCat={}, locked=new Set();
-let mistakes=0, penalty=0, guesses=[], over=false, animating=false, oaCount=0;
+let mistakes=0, penalty=0, guesses=[], over=false, animating=false, oaCount=0, wrongTrios=[];
 let clicks=0;   /* tile taps that changed the selection (selects + deselects) */
 let debugStreak=0; /* streak-preview override (set from the test menu) — never persisted */
 let adClicked=false;   /* ad-click tracking (stats only — no points) */
@@ -612,7 +612,7 @@ function loadGame(){
 }
 function saveGame(){
   const k=gameKey(); if(!k) return;
-  const payload=JSON.stringify({v:1,s:special,slots0,slots,sel:selection,solved:solvedIdx,m:mistakes,p:penalty,g:guesses,over,t0:startTime,sms:solveMs,ad:adClicked?1:0,adi:adClickedId,ck:clicks,perm:catPerm,oa:oaCount});
+  const payload=JSON.stringify({v:1,s:special,slots0,slots,sel:selection,solved:solvedIdx,m:mistakes,p:penalty,g:guesses,over,t0:startTime,sms:solveMs,ad:adClicked?1:0,adi:adClickedId,ck:clicks,perm:catPerm,oa:oaCount,wt:wrongTrios});
   try{ localStorage.setItem(k,payload); }
   catch(e){
     /* quota? the share-card JPEG cache is the only big regenerable thing we
@@ -642,6 +642,7 @@ function restoreGame(st){
   guesses=Array.isArray(st.g)?st.g:[];
   clicks=st.ck||0;   /* 0 on pre-feature saves → click awards simply don't fire */
   oaCount=st.oa||0;
+  wrongTrios=Array.isArray(st.wt)?st.wt:[];
   if(st.over){
     over=true;
     for(const ci of solvedIdx) for(const w of cats[ci].words) locked.add(w);
@@ -704,7 +705,7 @@ function startGame(){
   if(hubSpinTween){ hubSpinTween.kill(); hubSpinTween=null; }
   hubFx.forEach(tw=>tw.kill()); hubFx=[];
   selection=[]; solvedIdx=[]; colorCat={}; locked=new Set();
-  mistakes=0; penalty=0; guesses=[]; over=false; animating=false; adClicked=false; adClickedId=""; oaCount=0;
+  mistakes=0; penalty=0; guesses=[]; over=false; animating=false; adClicked=false; adClickedId=""; oaCount=0; wrongTrios=[];
   clicks=0; debugStreak=0;
   startTime=Date.now(); solveMs=null;
   fb={diff:0,fun:0,special:""};
@@ -1505,6 +1506,7 @@ function wrongAnim(sel,oneAway){
   selection=[];
   if(mistakes>=MAXM){ over=true; if(solveMs===null) solveMs=Date.now()-startTime; } /* clock stops at the fatal press too */
   if(oneAway) oaCount++;
+  if(wrongTrios.length<3) wrongTrios.push(sel.slice());   /* the actual words, for the crowd's "common wrong groupings" */
   saveGame();
   toast(oneAway?"One away!":"Nope.");
   if(G){
@@ -2029,10 +2031,20 @@ function csPageSlips(){
     const di=catPerm.indexOf(r.ai);
     return csBarRow(cats[di].name,COLORS[di],r.n,tot,myTot>0&&my[di]===Math.max(...my)&&my[di]>0);
   }).join("");
+  /* the crowd's most common wrong groupings (top 5), your own flagged */
+  const mine=new Set(wrongTrios.map(t=>t.map(w=>String(w).toLowerCase()).sort().join("|")));
+  const wr=(Array.isArray(d.wrongs)?d.wrongs:[]).filter(w=>w&&w.trio);
+  const maxN=wr.length?wr[0].n:0;
+  const wrRows=wr.map(w=>{
+    const you=mine.has(w.trio);
+    const label=w.trio.split("|").map(x=>x.toUpperCase()).join(" · ");
+    return csBarRow(label,"#c98a80",w.n,maxN||1,you);
+  }).join("");
+  const wrSec=wrRows?"<div class='cs-sec'><div class='cs-label'>Most common wrong groupings</div>"+wrRows+"</div>":"";
   const oa=(d.oan>0)?"<p class='cs-note'>"+(+d.oan).toLocaleString()+" “One away!” heartbreaks across the crowd today"+
     (oaCount>0?" — "+oaCount+" of them yours.":".")+"</p>":"";
   const yours=myTot===0?"<p class='cs-note'>You contributed zero wrong guesses. Show-off.</p>":"";
-  return "<div class='cs-sec'><div class='cs-label'>Where wrong guesses landed</div>"+rows+"</div>"+oa+yours;
+  return wrSec+"<div class='cs-sec'><div class='cs-label'>Where wrong guesses landed</div>"+rows+"</div>"+oa+yours;
 }
 /* card 4 — scores & speed: today's curve with your marker, solver count, early-bird */
 function csPageScores(){
@@ -3047,7 +3059,7 @@ function recordHistory(){
         adid:adClickedId||window.x43ad||"",   /* the ad they clicked, else the one on screen */
         fl:(cs2.revRainbow?1:0)|(cs2.rainbow?2:0)|(cs2.godDamnit?4:0)|(cs2.hubFirst?8:0)|
            (cs2.purpleFirst?16:0)|(cs2.perfect?32:0)|(cs2.fast?64:0)|(cs2.ruleBreaker?128:0),
-        oa:oaCount,
+        oa:oaCount, wg:wrongTrios,
         /* translate display→authored so crowd measurement stays unbiased */
         c:(()=>{const a=[0,0,0,0]; ct.c.forEach((v,di)=>{a[catPerm[di]]=v;}); return a;})(),
         so:ct.so.map(di=>catPerm[di])});
