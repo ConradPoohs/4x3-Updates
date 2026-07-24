@@ -1970,7 +1970,6 @@ let CS_D=null, CS_PAGE=0, CS_SDIST=null;
 const CS_PAGES=[
   {t:"Today",f:csPageToday},
   {t:"The sort",f:csPageSort},
-  {t:"Slips",f:csPageSlips},
   {t:"Traps",f:csPageWrongs},
   {t:"Scores",f:csPageScores},
   {t:"You",f:csPageLifetime}
@@ -2012,7 +2011,13 @@ function csGo(i,first){
   page.innerHTML=CS_PAGES[CS_PAGE].f();
   document.getElementById("csDots").innerHTML=CS_PAGES.map((p,k)=>
     "<i class='"+(k===CS_PAGE?"on":"")+"' title='"+esc(p.t)+"'></i>").join("");
-  if(!first&&G) G.from(page,{opacity:0,x:8,duration:.25,ease:"power1.out"});
+  /* fromTo + killTweensOf: a rapid back/forward click used to interrupt the
+     .from() mid-fade, freezing the card at partial opacity (the "barely
+     visible" bug) — .from() adopts the CURRENT value as its end state. */
+  if(!first&&G){
+    G.killTweensOf(page);
+    G.fromTo(page,{opacity:0,x:8},{opacity:1,x:0,duration:.25,ease:"power1.out",clearProps:"opacity,transform"});
+  }
 }
 const CS_RANK=["1st","2nd","3rd","4th"];
 /* card 1 — today: difficulty meter, first-solved, mistake spread (the classic card) */
@@ -2082,29 +2087,17 @@ function csPageSort(){
       "<div class='cs-label'>Easiest → hardest: three verdicts</div>"+svg+legend+"</div>"+
     "<p class='cs-note'>"+verdict+youNote+youHard+"</p>";
 }
-/* card 3 — slips: which category broke people, one-aways, your own share */
-function csPageSlips(){
-  const d=CS_D;
-  const tot=(d.w0||0)+(d.w1||0)+(d.w2||0)+(d.w3||0);
-  if(!tot) return "<p class='cs-note'>Almost no wrong guesses recorded yet today. Either it's a gentle one, or everyone's a genius before breakfast.</p>";
-  const my=catTelemetry().c;                        /* your wrong-guess attribution (display idx) */
-  const myTot=my.reduce((a,b)=>a+b,0);
-  const rows=[0,1,2,3].map(ai=>({ai,n:d["w"+ai]||0})).sort((a,b)=>b.n-a.n).map(r=>{
-    const di=catPerm.indexOf(r.ai);
-    return csBarRow(cats[di].name,COLORS[di],r.n,tot,myTot>0&&my[di]===Math.max(...my)&&my[di]>0);
-  }).join("");
-  const oa=(d.oan>0)?"<p class='cs-note'>"+(+d.oan).toLocaleString()+" “One away!” heartbreaks across the crowd today"+
-    (oaCount>0?" — "+oaCount+" of them yours.":".")+"</p>":"";
-  const yours=myTot===0?"<p class='cs-note'>You contributed zero wrong guesses. Show-off.</p>":"";
-  return "<div class='cs-sec'><div class='cs-label'>Where wrong guesses landed</div>"+rows+"</div>"+oa+yours;
-}
-/* card 4 — traps: the exact wrong trios the crowd locked in most, each word
+/* card 3 — traps: the exact wrong trios the crowd locked in most, each word
    underlined in the color of the category it REALLY belongs to (hub = ink) */
 function csPageWrongs(){
   const d=CS_D;
   const wr=(Array.isArray(d.wrongs)?d.wrongs:[]).filter(w=>w&&w.trio);
+  const oa=(d.oan>0)?"<p class='cs-note'>"+(+d.oan).toLocaleString()+" “One away!” heartbreaks across the crowd today"+
+    (oaCount>0?" — "+oaCount+" of them yours.":".")+"</p>":"";
+  const myTot=catTelemetry().c.reduce((a,b)=>a+b,0);
+  const yours=myTot===0?"<p class='cs-note'>You contributed zero wrong guesses. Show-off.</p>":"";
   if(!wr.length) return "<p class='cs-note'>No shared wrong guesses on record for this puzzle yet — "+
-    "either everyone sailed through, or the data is still rolling in. Check back later.</p>";
+    "either everyone sailed through, or the data is still rolling in. Check back later.</p>"+oa+yours;
   const mine=new Set(wrongTrios.map(t=>t.map(w=>String(w).toLowerCase()).sort().join("|")));
   const w2di={}; cats.forEach((c,di)=>c.words.forEach(w=>{ w2di[String(w).toLowerCase()]=di; }));
   const sp=String(special).toLowerCase();
@@ -2119,11 +2112,13 @@ function csPageWrongs(){
       "<div class='cs-wchips'>"+chips+(you?"<span class='cs-you'>You</span>":"")+"</div>"+
       "<div class='cs-row' style='margin:4px 0 0'>"+
         "<span class='cs-bar'><i style='width:"+Math.max(4,Math.round(100*w.n/maxN))+"%;background:#c98a80'></i></span>"+
-        "<span class='cs-pct' style='flex-basis:auto'>"+(+w.n).toLocaleString()+"</span></div></div>";
+        "<span class='cs-pct' style='flex-basis:auto'>"+(+w.n).toLocaleString()+
+          "<span class='cs-pn'> "+(w.n===1?"player":"players")+"</span></span></div></div>";
   }).join("");
   return "<div class='cs-sec' style='border-top:0;margin-top:10px;padding-top:0'>"+
       "<div class='cs-label'>Most common wrong guesses</div>"+rows+"</div>"+
-    "<p class='cs-note'>Each word's underline is the category it really belongs to — the hub word wears ink.</p>";
+    "<p class='cs-note'>Counts are how many players locked in that exact trio. "+
+      "Each word's underline is the category it really belongs to — the hub word wears ink.</p>"+oa+yours;
 }
 /* card 4 — scores & speed: today's curve with your marker, solver count, early-bird */
 function csPageScores(){

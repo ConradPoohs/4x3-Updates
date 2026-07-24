@@ -95,15 +95,24 @@
   /* Beta-puzzle result / feedback. Fired automatically on finish (fb:0, solve
    * fields only) and again when the tester taps "Send feedback" (fb:1, adds
    * stars / spotted-hub / notes / name). ev = {bp, hub, name, w, m, ms, so,
-   * diff, fun, sp, notes, fb} — bp is the short hash of the #b= payload. */
+   * c, r, cats, diff, fun, sp, notes, fb} — bp is the short hash of the #b=
+   * payload. c = [m0..m3] mistakes attributed per category (authored index —
+   * beta boards never permute), r = [r0..r3] per-category difficulty ratings
+   * 1-5 (0 = unrated), cats = the four category names (dashboard labels). */
   window.x43beta = function (ev) {
     var id = anon(); if (!id || !ev || !ev.bp) return;
+    var c = Array.isArray(ev.c) ? ev.c.slice(0, 4).map(function (n) { return n | 0; }) : [0, 0, 0, 0];
+    var r = Array.isArray(ev.r) ? ev.r.slice(0, 4).map(function (n) { return n | 0; }) : [0, 0, 0, 0];
+    var cats = Array.isArray(ev.cats)
+      ? ev.cats.slice(0, 4).map(function (s) { return String(s || "").slice(0, 40); })
+      : [];
     send("/fb", {
-      v: 1, id: id, bp: String(ev.bp),
+      v: 2, id: id, bp: String(ev.bp),
       hub: String(ev.hub || "").slice(0, 24),
       name: String(ev.name || "").slice(0, 40),
       w: ev.w ? 1 : 0, m: ev.m | 0, ms: ev.ms | 0,
       so: String(ev.so || "").replace(/[^0-3]/g, "").slice(0, 4),
+      c: c, r: r, cats: cats,
       diff: ev.diff | 0, fun: ev.fun | 0,
       sp: String(ev.sp || "").toLowerCase(),
       notes: String(ev.notes || "").slice(0, 2000),
