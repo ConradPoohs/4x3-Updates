@@ -255,6 +255,8 @@
       <b>🧪 Beta feedback for the creator</b>
       <label style="display:block;margin-top:10px;font-size:14px">How hard was it? (1 = trivial, 5 = brutal)</label>
       <div class="stars" id="fbDiff"></div>
+      <label style="display:block;font-size:14px">How hard was each category?</label>
+      <div id="fbCats" style="margin:4px 0 10px"></div>
       <label style="display:block;font-size:14px">How fun was it?</label>
       <div class="stars" id="fbFun"></div>
       <label style="display:block;font-size:14px">Did you figure out the special word before the end?</label>
@@ -418,7 +420,7 @@ async function applyCrowdOrder(){
 }
 let hubEmoji=null; /* emoji that bursts from the hub on the post-win tap (custom puzzles carry their own) */
 const MAXM=3;
-let fb={diff:0,fun:0,special:""};
+let fb={diff:0,fun:0,special:"",r:[0,0,0,0]};
 let TW=0, TH=0, GAP=8;
 /* chance a reflow includes a flip at all — at most ONE card flips per transition,
    chosen at random from the moving (non-hub) cards. Tweak to taste. */
@@ -708,7 +710,7 @@ function startGame(){
   mistakes=0; penalty=0; guesses=[]; over=false; animating=false; adClicked=false; adClickedId=""; oaCount=0; wrongTrios=[];
   clicks=0; debugStreak=0;
   startTime=Date.now(); solveMs=null;
-  fb={diff:0,fun:0,special:""};
+  fb={diff:0,fun:0,special:"",r:[0,0,0,0]};
   document.getElementById("boardWrap").style.display="";
   document.getElementById("postHub").style.display="none";
   document.getElementById("admireBack").style.display="none";
@@ -1728,7 +1730,9 @@ function endGame(won){
   try{
     if(isBeta&&betaId&&window.x43beta){
       let nm=""; try{ nm=localStorage.getItem("x43_name")||""; }catch(e){}
-      x43beta({bp:betaId, hub:special, name:nm, w:won?1:0, m:mistakes, ms:solveMs, so:catTelemetry().so});
+      const ct=catTelemetry();
+      x43beta({bp:betaId, hub:special, name:nm, w:won?1:0, m:mistakes, ms:solveMs,
+        so:ct.so, c:ct.c, cats:cats.map(c=>c.name)});
     }
   }catch(e){}
   /* no more selecting/shuffling to undo */
@@ -1949,7 +1953,6 @@ function showCommStats(){
   const el=document.getElementById("commStats");
   const reveal=()=>{
     el.style.display="";
-    requestAnimationFrame(csEqualize);   /* measure at real width once visible */
     if(G) G.from(el,{opacity:0,y:14,duration:.5,ease:"power2.out"});
   };
   x43stats(dailyKey).then(d=>{
@@ -1970,26 +1973,10 @@ let CS_D=null, CS_PAGE=0, CS_SDIST=null;
 const CS_PAGES=[
   {t:"Today",f:csPageToday},
   {t:"The sort",f:csPageSort},
-  {t:"Traps",f:csPageWrongs},
+  {t:"Slips",f:csPageSlips},
   {t:"Scores",f:csPageScores},
   {t:"You",f:csPageLifetime}
 ];
-/* every card gets the tallest card's height, so the arrows/dots never jump
-   around while paging. Measured off-DOM at the pager's current width; re-run
-   on resize and whenever late data (sdist) grows a card. */
-function csEqualize(){
-  const page=document.getElementById("csPage");
-  if(!page||!CS_D||!page.clientWidth) return;
-  const ghost=document.createElement("div");
-  ghost.style.cssText="position:absolute;left:-9999px;top:0;visibility:hidden;overflow:hidden;width:"+page.clientWidth+"px";
-  page.parentNode.appendChild(ghost);
-  let max=0;
-  CS_PAGES.forEach(pg=>{ try{ ghost.innerHTML=pg.f(); max=Math.max(max,ghost.offsetHeight); }catch(e){} });
-  ghost.remove();
-  if(max) page.style.minHeight=max+"px";
-}
-let csEqT=null;
-window.addEventListener("resize",()=>{ clearTimeout(csEqT); csEqT=setTimeout(csEqualize,150); });
 function csRenderPager(el){
   el.innerHTML=
     "<div class='cs-kicker'>How everyone did</div>"+
@@ -2011,13 +1998,7 @@ function csGo(i,first){
   page.innerHTML=CS_PAGES[CS_PAGE].f();
   document.getElementById("csDots").innerHTML=CS_PAGES.map((p,k)=>
     "<i class='"+(k===CS_PAGE?"on":"")+"' title='"+esc(p.t)+"'></i>").join("");
-  /* fromTo + killTweensOf: a rapid back/forward click used to interrupt the
-     .from() mid-fade, freezing the card at partial opacity (the "barely
-     visible" bug) — .from() adopts the CURRENT value as its end state. */
-  if(!first&&G){
-    G.killTweensOf(page);
-    G.fromTo(page,{opacity:0,x:8},{opacity:1,x:0,duration:.25,ease:"power1.out",clearProps:"opacity,transform"});
-  }
+  if(!first&&G) G.from(page,{opacity:0,x:8,duration:.25,ease:"power1.out"});
 }
 const CS_RANK=["1st","2nd","3rd","4th"];
 /* card 1 — today: difficulty meter, first-solved, mistake spread (the classic card) */
@@ -2036,89 +2017,50 @@ function csPageToday(){
     "<div class='cs-sec'><div class='cs-label'>First category solved</div>"+firstRows+"</div>"+
     "<div class='cs-sec'><div class='cs-label'>How it went</div>"+mistRows+"</div>";
 }
-/* card 2 — the sort, as a slope chart: one colored line per category, tracing
-   its rank through Hank's intended order, the crowd's verdict, and your own
-   solve path. Flat lines = agreement; crossings = upsets; ✕ = never solved. */
+/* card 2 — the sort: Hank's difficulty call vs the crowd's vs your path */
 function csPageSort(){
-  const so=String(catTelemetry().so);               /* your real solve order (display-idx digits) */
+  const so=catTelemetry().so;                       /* your real solve order (display idx) */
   const crowdKnown=(crowdState==="set"||crowdState==="same");
-  /* your column: solved cats at their solve position; never-solved cats spread
-     across the leftover slots (Hank's order) so their ✕ marks don't pile up.
-     Encoding: slot for solved, -(slot+1) for never — sign carries "never". */
-  const youAt={};
-  { const unsolved=[0,1,2,3].filter(di=>so.indexOf(String(di))<0).sort((a,b)=>catPerm[a]-catPerm[b]);
-    const freeSlots=[0,1,2,3].filter(r=>r>=so.length);
-    [0,1,2,3].forEach(di=>{ const i=so.indexOf(String(di));
-      youAt[di]=i>=0?i:-(freeSlots[unsolved.indexOf(di)]+1); }); }
-  const cols=crowdKnown
-    ? [["Hank",di=>catPerm[di]],["Crowd",di=>di],["You",di=>youAt[di]]]
-    : [["Hank",di=>catPerm[di]],["You",di=>youAt[di]]];
-  const W=340,TOP=42,ROW=32,H=TOP+3*ROW+18;
-  const xs=cols.length===3?[84,180,276]:[110,250];
-  const yy=r=>TOP+r*ROW;
-  let svg="<svg class='cs-slope' viewBox='0 0 "+W+" "+H+"' role='img' aria-label='Category difficulty: Hank vs crowd vs you'>";
-  svg+=cols.map((c,i)=>"<text class='sl-h' x='"+xs[i]+"' y='15' text-anchor='middle'>"+esc(c[0])+"</text>").join("");
-  svg+=["1st","2nd","3rd","4th"].map((t,r)=>"<text class='sl-r' x='8' y='"+(yy(r)+3.5)+"'>"+t+"</text>").join("");
-  let nodes="";
-  [0,1,2,3].forEach(di=>{
-    const P=cols.map((c,i)=>{ const r=c[1](di); return {x:xs[i],y:yy(r>=0?r:-r-1),ok:r>=0}; });
-    const tip=esc(cats[di].name)+" — "+cols.map((c,i)=>{const r=c[1](di);
-      return c[0]+" "+(r>=0?CS_RANK[r]:"never");}).join(", ");
-    for(let i=1;i<P.length;i++){
-      svg+="<line x1='"+P[i-1].x+"' y1='"+P[i-1].y+"' x2='"+P[i].x+"' y2='"+P[i].y+
-        "' stroke='"+COLORS[di]+"' stroke-width='3' stroke-linecap='round' opacity='.85'"+
-        ((!P[i].ok||!P[i-1].ok)?" stroke-dasharray='3,4'":"")+"><title>"+tip+"</title></line>";
-    }
-    P.forEach(pt=>{ nodes+=pt.ok
-      ? "<circle cx='"+pt.x+"' cy='"+pt.y+"' r='5' fill='"+COLORS[di]+"' class='sl-n'><title>"+tip+"</title></circle>"
-      : "<text class='sl-x' x='"+pt.x+"' y='"+(pt.y+4)+"' text-anchor='middle'>✕<title>"+tip+"</title></text>"; });
-  });
-  svg+=nodes+"</svg>";
-  const legend="<div class='cs-legend'>"+[0,1,2,3].map(di=>
-    "<span><span class='dotc' style='background:"+COLORS[di]+"'></span>"+esc(cats[di].name)+"</span>").join("")+"</div>";
+  const rows=[0,1,2,3].map(di=>{
+    const you=so.indexOf(di);
+    return "<div class='cs-row'><span class='cs-name'><span class='dotc' style='background:"+COLORS[di]+"'></span>"+esc(cats[di].name)+"</span>"+
+      "<span class='cs-trio'>Hank "+CS_RANK[catPerm[di]]+" · Crowd "+(crowdKnown?CS_RANK[di]:"—")+
+      " · You "+(you>=0?CS_RANK[you]:"never")+"</span></div>";
+  }).join("");
   let verdict;
-  if(!crowdKnown) verdict="The crowd's ranking is still being charted — you're early, so it's just Hank's intended order and your path.";
-  else if(crowdState==="same") verdict="Flat lines between Hank and Crowd: everyone sorted this one exactly as Hank intended.";
-  else verdict="Lines crossing between Hank and Crowd are the upsets — the crowd disagreed with Hank's difficulty call there.";
-  const youNote=" “You” is the order the categories actually fell for you"+(so.length<4?" (✕ = never fell)":"")+".";
+  if(!crowdKnown) verdict="The crowd's ranking is still being charted — you're early.";
+  else if(crowdState==="same") verdict="Hank called it: the crowd agreed with his difficulty sort.";
+  else verdict="The crowd overruled Hank's sort — the colors above are the people's ranking.";
   const hardest=cats[3]?cats[3].name:"";
-  const youHard=so.length===4&&so.charAt(0)==="3"?" You cracked "+esc(hardest)+" first, you menace.":"";
-  return "<div class='cs-sec' style='border-top:0;margin-top:8px;padding-top:0'>"+
-      "<div class='cs-label'>Easiest → hardest: three verdicts</div>"+svg+legend+"</div>"+
-    "<p class='cs-note'>"+verdict+youNote+youHard+"</p>";
+  const youHard=so.length===4&&so[0]===3?" You cracked "+esc(hardest)+" first, you menace.":"";
+  return "<div class='cs-sec'><div class='cs-label'>Ranked easiest → hardest</div>"+rows+"</div>"+
+    "<p class='cs-note'>"+verdict+youHard+"</p>";
 }
-/* card 3 — traps: the exact wrong trios the crowd locked in most, each word
-   underlined in the color of the category it REALLY belongs to (hub = ink) */
-function csPageWrongs(){
+/* card 3 — slips: which category broke people, one-aways, your own share */
+function csPageSlips(){
   const d=CS_D;
+  const tot=(d.w0||0)+(d.w1||0)+(d.w2||0)+(d.w3||0);
+  if(!tot) return "<p class='cs-note'>Almost no wrong guesses recorded yet today. Either it's a gentle one, or everyone's a genius before breakfast.</p>";
+  const my=catTelemetry().c;                        /* your wrong-guess attribution (display idx) */
+  const myTot=my.reduce((a,b)=>a+b,0);
+  const rows=[0,1,2,3].map(ai=>({ai,n:d["w"+ai]||0})).sort((a,b)=>b.n-a.n).map(r=>{
+    const di=catPerm.indexOf(r.ai);
+    return csBarRow(cats[di].name,COLORS[di],r.n,tot,myTot>0&&my[di]===Math.max(...my)&&my[di]>0);
+  }).join("");
+  /* the crowd's most common wrong groupings (top 5), your own flagged */
+  const mine=new Set(wrongTrios.map(t=>t.map(w=>String(w).toLowerCase()).sort().join("|")));
   const wr=(Array.isArray(d.wrongs)?d.wrongs:[]).filter(w=>w&&w.trio);
+  const maxN=wr.length?wr[0].n:0;
+  const wrRows=wr.map(w=>{
+    const you=mine.has(w.trio);
+    const label=w.trio.split("|").map(x=>x.toUpperCase()).join(" · ");
+    return csBarRow(label,"#c98a80",w.n,maxN||1,you);
+  }).join("");
+  const wrSec=wrRows?"<div class='cs-sec'><div class='cs-label'>Most common wrong groupings</div>"+wrRows+"</div>":"";
   const oa=(d.oan>0)?"<p class='cs-note'>"+(+d.oan).toLocaleString()+" “One away!” heartbreaks across the crowd today"+
     (oaCount>0?" — "+oaCount+" of them yours.":".")+"</p>":"";
-  const myTot=catTelemetry().c.reduce((a,b)=>a+b,0);
   const yours=myTot===0?"<p class='cs-note'>You contributed zero wrong guesses. Show-off.</p>":"";
-  if(!wr.length) return "<p class='cs-note'>No shared wrong guesses on record for this puzzle yet — "+
-    "either everyone sailed through, or the data is still rolling in. Check back later.</p>"+oa+yours;
-  const mine=new Set(wrongTrios.map(t=>t.map(w=>String(w).toLowerCase()).sort().join("|")));
-  const w2di={}; cats.forEach((c,di)=>c.words.forEach(w=>{ w2di[String(w).toLowerCase()]=di; }));
-  const sp=String(special).toLowerCase();
-  const maxN=wr[0].n||1;
-  const rows=wr.map(w=>{
-    const you=mine.has(w.trio);
-    const chips=w.trio.split("|").map(x=>{
-      const col=x===sp?"var(--ink)":(w2di[x]!=null?COLORS[w2di[x]]:"#8f8574");
-      return "<span class='cs-chip' style='border-bottom-color:"+col+"'>"+esc(x.toUpperCase())+"</span>";
-    }).join("");
-    return "<div class='cs-wrow'>"+
-      "<div class='cs-wchips'>"+chips+(you?"<span class='cs-you'>You</span>":"")+"</div>"+
-      "<div class='cs-row' style='margin:4px 0 0'>"+
-        "<span class='cs-bar'><i style='width:"+Math.max(4,Math.round(100*w.n/maxN))+"%;background:#c98a80'></i></span>"+
-        "<span class='cs-pct' style='flex-basis:auto'>"+(+w.n).toLocaleString()+
-          "<span class='cs-pn'> "+(w.n===1?"player":"players")+"</span></span></div></div>";
-  }).join("");
-  return "<div class='cs-sec' style='border-top:0;margin-top:10px;padding-top:0'>"+
-      "<div class='cs-label'>Most common wrong guesses</div>"+rows+"</div>"+
-    "<p class='cs-note'>Counts are how many players locked in that exact trio. "+
-      "Each word's underline is the category it really belongs to — the hub word wears ink.</p>"+oa+yours;
+  return wrSec+"<div class='cs-sec'><div class='cs-label'>Where wrong guesses landed</div>"+rows+"</div>"+oa+yours;
 }
 /* card 4 — scores & speed: today's curve with your marker, solver count, early-bird */
 function csPageScores(){
@@ -2185,9 +2127,7 @@ function csPageLifetime(){
   if(CS_SDIST===null){
     CS_SDIST=false;
     fetch("https://fourbythree-stats.hankmt.workers.dev/sdist").then(r=>r.json()).then(j=>{
-      if(j&&j.ok&&Array.isArray(j.streaks)){ CS_SDIST=j.streaks;
-        if(CS_PAGES[CS_PAGE]&&CS_PAGES[CS_PAGE].t==="You") csGo(CS_PAGE);
-        csEqualize(); }
+      if(j&&j.ok&&Array.isArray(j.streaks)){ CS_SDIST=j.streaks; if(CS_PAGE===4) csGo(4); }
     }).catch(()=>{});
   } else if(Array.isArray(CS_SDIST)&&cur>0){
     const upper={"1":1,"2-4":4,"5-9":9,"10-29":29,"30+":Infinity};
@@ -2978,7 +2918,30 @@ function initFb(){
       el.appendChild(b);
     }
   }
-  starPaint(); ynPaint();
+  /* one 1-5 star row per category, coloured dot + name. Beta boards never
+     permute (applyCrowdOrder skips isBeta), so row i = authored index i. */
+  const fc=document.getElementById("fbCats");
+  if(fc){
+    fc.innerHTML="";
+    cats.forEach((cat,i)=>{
+      const row=document.createElement("div");
+      row.style.cssText="display:flex;align-items:center;gap:8px;margin:2px 0";
+      const nm=document.createElement("span");
+      nm.style.cssText="flex:1;min-width:0;font-size:13px;display:flex;align-items:center;gap:6px";
+      const dot=document.createElement("span");
+      dot.style.cssText="width:10px;height:10px;border-radius:3px;flex:none;background:"+COLORS[i];
+      nm.appendChild(dot); nm.appendChild(document.createTextNode(cat.name));
+      const st=document.createElement("div"); st.className="stars"; st.style.margin="0";
+      for(let s=1;s<=5;s++){
+        const b=document.createElement("button"); b.textContent="\u2b50"; b.style.fontSize="17px";
+        b.onclick=()=>{fb.r[i]=s; catStarPaint();};
+        st.appendChild(b);
+      }
+      row.appendChild(nm); row.appendChild(st);
+      fc.appendChild(row);
+    });
+  }
+  starPaint(); catStarPaint(); ynPaint();
   document.getElementById("fbMail").style.display=puzzle.e?"":"none";
   try{ document.getElementById("fbName").value=localStorage.getItem("x43_name")||""; }catch(e){}
 }
@@ -2988,8 +2951,10 @@ function sendFeedback(){
   try{ if(name) localStorage.setItem("x43_name",name); }catch(e){}
   try{
     if(window.x43beta&&betaId){
+      const ct=catTelemetry();
       x43beta({bp:betaId, hub:special, name:name,
-        w:mistakes<MAXM?1:0, m:mistakes, ms:solveMs, so:catTelemetry().so,
+        w:mistakes<MAXM?1:0, m:mistakes, ms:solveMs, so:ct.so,
+        c:ct.c, r:fb.r.slice(), cats:cats.map(c=>c.name),
         diff:fb.diff, fun:fb.fun, sp:(fb.special||"").toLowerCase(),
         notes:document.getElementById("fbNotes").value.trim(), fb:1});
     }
@@ -3001,6 +2966,11 @@ function sendFeedback(){
 function starPaint(){
   document.querySelectorAll("#fbDiff button").forEach((b,i)=>b.classList.toggle("on",i<fb.diff));
   document.querySelectorAll("#fbFun button").forEach((b,i)=>b.classList.toggle("on",i<fb.fun));
+}
+function catStarPaint(){
+  document.querySelectorAll("#fbCats .stars").forEach((st,i)=>{
+    st.querySelectorAll("button").forEach((b,j)=>b.classList.toggle("on",j<(fb.r[i]||0)));
+  });
 }
 function ynPaint(){
   document.querySelectorAll("#fbSpecial button").forEach(b=>b.classList.toggle("on",b.textContent===fb.special));
@@ -3062,6 +3032,7 @@ function feedbackText(){
   return "4×3 BETA FEEDBACK\n"+
     "Result: "+(won?"solved":"failed")+" · "+(mistakes?mistakes+" mistake"+(mistakes===1?"":"s"):"No mistakes")+"\n"+
     "Difficulty: "+(fb.diff||"–")+"/5 · Fun: "+(fb.fun||"–")+"/5\n"+
+    "Categories: "+cats.map((c,i)=>c.name+" "+(fb.r[i]||"–")+"/5").join(" · ")+"\n"+
     "Spotted the special word early: "+(fb.special||"–")+"\n"+
     "Notes: "+(document.getElementById("fbNotes").value.trim()||"(none)")+"\n"+
     guesses.map(g=>g.map(w=>w===special?"⭐":EMOJI[cats.findIndex(c=>c.words.includes(w))]||"⬜").join("")).join("\n");
