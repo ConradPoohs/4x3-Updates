@@ -3072,9 +3072,12 @@ function recordHistory(){
         fl:(cs2.revRainbow?1:0)|(cs2.rainbow?2:0)|(cs2.godDamnit?4:0)|(cs2.hubFirst?8:0)|
            (cs2.purpleFirst?16:0)|(cs2.perfect?32:0)|(cs2.fast?64:0)|(cs2.ruleBreaker?128:0),
         oa:oaCount, wg:wrongTrios,
-        /* translate display→authored so crowd measurement stays unbiased */
+        /* translate display→authored so crowd measurement stays unbiased.
+           NB: ct.so is a digit STRING (catTelemetry joins it) — calling .map on it
+           threw a TypeError that the catch below swallowed, killing the beacon for
+           every up-to-date client (the 2026-07-22 → 07-24 stats blackout). */
         c:(()=>{const a=[0,0,0,0]; ct.c.forEach((v,di)=>{a[catPerm[di]]=v;}); return a;})(),
-        so:ct.so.map(di=>catPerm[di])});
+        so:String(ct.so).split("").map(d=>catPerm[+d]).join("")});
     }
   }catch(e){}
   /* cache a COMPACT preview for the history lightbox — a downscaled JPEG, NOT the full

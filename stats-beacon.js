@@ -67,6 +67,8 @@
       ad: ev.ad ? 1 : 0,
       adid: String(ev.adid || "").toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 16),
       c: c, so: String(ev.so || "").replace(/[^0-3]/g, "").slice(0, 4),
+      fl: ev.fl | 0, oa: ev.oa | 0,
+      wg: Array.isArray(ev.wg) ? ev.wg.slice(0, 3) : [],
       src: src(), dev: dev()
     });
   };
