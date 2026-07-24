@@ -286,7 +286,7 @@
     color:var(--ink); border-bottom:2px solid var(--ink); padding-bottom:7px;}
   .cs-sub{font-size:13px; color:var(--mut); margin:8px 0 2px; font-variant-numeric:tabular-nums;}
   /* stats pager chrome */
-  .cs-page{min-height:150px;}
+  .cs-page{min-height:150px; overflow:hidden;} /* BFC: contain child margins so the nav row never shifts */
   .cs-navrow{display:flex; align-items:center; justify-content:center; gap:14px; margin-top:12px;}
   .cs-arrow{width:30px; height:30px; border-radius:50%; border:1.5px solid var(--line);
     background:var(--card); color:var(--mut); font-size:17px; line-height:1; cursor:pointer;}
@@ -318,6 +318,19 @@
   .cs-pct{flex:0 0 38px; font-weight:600; font-variant-numeric:tabular-nums; text-align:right;}
   .cs-you{font-size:10px; font-weight:700; letter-spacing:.09em; text-transform:uppercase;
     background:var(--ink); color:var(--paper); border-radius:4px; padding:2.5px 6px;}
+  /* "Traps" card: wrong-guess trios as category-underlined word chips */
+  .cs-wrow{margin:11px 0;}
+  .cs-wchips{display:flex; align-items:center; gap:6px; flex-wrap:wrap;}
+  .cs-chip{font-size:12px; font-weight:700; letter-spacing:.02em; padding:3px 8px 2px;
+    border-radius:6px 6px 3px 3px; background:var(--card2); border:1px solid var(--rule);
+    border-bottom:3px solid var(--mut2); color:var(--mut4);}
+  /* "The sort" card: slope chart */
+  .cs-slope{width:100%; height:auto; display:block; margin-top:8px;}
+  .cs-slope .sl-h{font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; fill:var(--mut3);}
+  .cs-slope .sl-r{font-size:10px; fill:var(--mut2); font-variant-numeric:tabular-nums;}
+  .cs-slope .sl-x{font-size:13px; font-weight:700; fill:var(--mut3);}
+  .cs-slope .sl-n{stroke:var(--paper); stroke-width:2;}
+  .cs-legend{display:flex; flex-wrap:wrap; gap:4px 14px; margin-top:9px; font-size:12.5px; color:var(--mut4);}
   /* feedback */
   .fb .stars{display:flex; gap:6px; margin:4px 0 10px;}
   .fb .stars button{font-size:24px; background:none; border:none; cursor:pointer; filter:grayscale(1); padding:2px;}
