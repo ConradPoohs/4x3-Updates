@@ -1733,6 +1733,13 @@ function endGame(won){
       const ct=catTelemetry();
       x43beta({bp:betaId, hub:special, name:nm, w:won?1:0, m:mistakes, ms:solveMs,
         so:ct.so, c:ct.c, cats:cats.map(c=>c.name)});
+      /* completion marker for the tester portal (betaplay.html) — beta plays
+         have no game save, so this is the only local trace a finish leaves */
+      try{
+        const bd=JSON.parse(localStorage.getItem("x43_beta_done")||"{}");
+        bd[betaId]={...(bd[betaId]||{}), w:won?1:0, m:mistakes, ts:Date.now()};
+        localStorage.setItem("x43_beta_done",JSON.stringify(bd));
+      }catch(e){}
     }
   }catch(e){}
   /* no more selecting/shuffling to undo */
@@ -2962,6 +2969,12 @@ function sendFeedback(){
   const b=document.getElementById("fbSend");
   b.textContent="Sent — thank you ✓"; b.disabled=true;
   setTimeout(()=>{ b.textContent="Send again"; b.disabled=false; },4000);
+  /* mark feedback-sent for the tester portal (betaplay.html) */
+  try{
+    const bd=JSON.parse(localStorage.getItem("x43_beta_done")||"{}");
+    bd[betaId]={...(bd[betaId]||{}), fb:1, ts:Date.now()};
+    localStorage.setItem("x43_beta_done",JSON.stringify(bd));
+  }catch(e){}
 }
 function starPaint(){
   document.querySelectorAll("#fbDiff button").forEach((b,i)=>b.classList.toggle("on",i<fb.diff));
