@@ -2043,31 +2043,28 @@ function csPageSort(){
   return "<div class='cs-sec'><div class='cs-label'>Ranked easiest → hardest</div>"+rows+"</div>"+
     "<p class='cs-note'>"+verdict+youHard+"</p>";
 }
-/* card 3 — slips: which category broke people, one-aways, your own share */
+/* card 3 — slips: the crowd's most common wrong groupings */
 function csPageSlips(){
   const d=CS_D;
-  const tot=(d.w0||0)+(d.w1||0)+(d.w2||0)+(d.w3||0);
-  if(!tot) return "<p class='cs-note'>Almost no wrong guesses recorded yet today. Either it's a gentle one, or everyone's a genius before breakfast.</p>";
-  const my=catTelemetry().c;                        /* your wrong-guess attribution (display idx) */
-  const myTot=my.reduce((a,b)=>a+b,0);
-  const rows=[0,1,2,3].map(ai=>({ai,n:d["w"+ai]||0})).sort((a,b)=>b.n-a.n).map(r=>{
-    const di=catPerm.indexOf(r.ai);
-    return csBarRow(cats[di].name,COLORS[di],r.n,tot,myTot>0&&my[di]===Math.max(...my)&&my[di]>0);
-  }).join("");
-  /* the crowd's most common wrong groupings (top 5), your own flagged */
+  const wr=(Array.isArray(d.wrongs)?d.wrongs:[]).filter(w=>w&&w.trio&&w.n>=3);
   const mine=new Set(wrongTrios.map(t=>t.map(w=>String(w).toLowerCase()).sort().join("|")));
-  const wr=(Array.isArray(d.wrongs)?d.wrongs:[]).filter(w=>w&&w.trio);
-  const maxN=wr.length?wr[0].n:0;
-  const wrRows=wr.map(w=>{
+  const myTot=catTelemetry().c.reduce((a,b)=>a+b,0);
+  if(!wr.length)
+    return "<p class='cs-note'>Not enough wrong guesses recorded yet today — the crowd's most tempting traps show up here as people fall into them.</p>";
+  const rows=wr.map(w=>{
     const you=mine.has(w.trio);
-    const label=w.trio.split("|").map(x=>x.toUpperCase()).join(" · ");
-    return csBarRow(label,"#c98a80",w.n,maxN||1,you);
+    const pct=d.plays?Math.max(1,Math.round(100*w.n/d.plays)):0;
+    return "<div class='cs-wrow"+(you?" you":"")+"'>"+
+      "<div class='cs-wtrio'>"+w.trio.split("|").map(x=>esc(x.toUpperCase())).join(" · ")+
+        (you?"<span class='cs-wyou'>You too</span>":"")+"</div>"+
+      "<div class='cs-wbar'><span class='cs-wtrack'><i style='width:"+pct+"%'></i></span>"+
+        "<span class='cs-wpct'>"+pct+"% of players</span></div>"+
+    "</div>";
   }).join("");
-  const wrSec=wrRows?"<div class='cs-sec'><div class='cs-label'>Most common wrong groupings</div>"+wrRows+"</div>":"";
   const oa=(d.oan>0)?"<p class='cs-note'>"+(+d.oan).toLocaleString()+" “One away!” heartbreaks across the crowd today"+
     (oaCount>0?" — "+oaCount+" of them yours.":".")+"</p>":"";
-  const yours=myTot===0?"<p class='cs-note'>You contributed zero wrong guesses. Show-off.</p>":"";
-  return wrSec+"<div class='cs-sec'><div class='cs-label'>Where wrong guesses landed</div>"+rows+"</div>"+oa+yours;
+  const yours=myTot===0?"<p class='cs-note'>You fell for none of them. Show-off.</p>":"";
+  return "<div class='cs-sec'><div class='cs-label'>Today's most tempting wrong groups</div>"+rows+"</div>"+oa+yours;
 }
 /* card 4 — scores & speed: today's curve with your marker, solver count, early-bird */
 function csPageScores(){
