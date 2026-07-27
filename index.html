@@ -378,6 +378,7 @@ let selection=[], solvedIdx=[], colorCat={}, locked=new Set();
 let mistakes=0, penalty=0, guesses=[], over=false, animating=false, oaCount=0, wrongTrios=[];
 let clicks=0;   /* tile taps that changed the selection (selects + deselects) */
 let debugStreak=0; /* streak-preview override (set from the test menu) — never persisted */
+let isDemoFB=false;  /* daily wanted but unreachable → practice board, nothing counts */
 let adClicked=false;   /* ad-click tracking (stats only — no points) */
 let adClickedId="";    /* which ad they tapped (for the stats beacon) */
 let startTime=0, solveMs=null; /* speed timer: starts on load, stops at the finish */
@@ -463,6 +464,27 @@ async function init(){
     else if(h.startsWith("#p=")){ puzzle=decPuzzle(h.slice(3)); }
     else if(h.startsWith("#d=")){ archiveDate=decodeURIComponent(h.slice(3)); }
     else if(h.startsWith("#t=")){ testDate=decodeURIComponent(h.slice(3)); } /* beta-test an already-scheduled puzzle */
+    else if(h.startsWith("#mend=")){
+      /* signed streak-repair link (support tool): restore a date as a
+         release-day win, then carry on to the normal daily */
+      const mm=decodeURIComponent(h.slice(6)).split(".");
+      try{ history.replaceState(null,"",location.pathname+location.search); }catch(e){}
+      if(mm.length===2){
+        try{
+          const r=await fetch("https://fourbythree-stats.hankmt.workers.dev/mendck",{
+            method:"POST",headers:{"Content-Type":"text/plain"},
+            body:JSON.stringify({d:mm[0],code:mm[1]})});
+          const j=await r.json();
+          if(j&&j.ok){
+            const hh=JSON.parse(localStorage.getItem("x43_history")||"{}");
+            const prev=hh[mm[0]]||{};
+            hh[mm[0]]={...prev,w:(prev.w===0?1:(prev.w===undefined?1:prev.w)),rel:1,mend:1,ts:Date.now()};
+            localStorage.setItem("x43_history",JSON.stringify(hh));
+            toast("💛 Streak restored for "+fmtDate(mm[0])+" — sorry about that!",4200);
+          } else toast("That repair link isn't valid.");
+        }catch(e){ toast("Couldn't verify the repair link — try again in a moment."); }
+      }
+    }
     else if(h.startsWith("#c=")){ const bid=decodeURIComponent(h.slice(3)); if(/^[a-z0-9]{6,20}$/.test(bid)) communityBid=bid; } /* community puzzle */
   }catch(e){ toast("Couldn't read that puzzle link — showing today's game."); }
   if(!puzzle&&communityBid){
@@ -480,11 +502,22 @@ async function init(){
   }
   if(!puzzle){
     /* no link (or an #d= archive / #t= test date): load from puzzles.json — that
-       specific day if given and valid, otherwise the most recent entry ≤ today */
+       specific day if given and valid, otherwise the most recent entry ≤ today.
+       The last good copy is CACHED: it already holds future days, so one failed
+       fetch on a sleepy phone radio must never hand out the demo board (that
+       silently broke real streaks — the board looks identical to a daily). */
     try{
-      const r=await fetch(pjURL(),{cache:"no-store"});
-      if(r.ok){
-        const data=await r.json();
+      let data=null;
+      try{
+        const r=await fetch(pjURL(),{cache:"no-store"});
+        if(r.ok){ data=await r.json();
+          try{ localStorage.setItem("x43_pdata",JSON.stringify(data)); }catch(e){} }
+      }catch(e){}
+      if(!data){
+        try{ data=JSON.parse(localStorage.getItem("x43_pdata")||"null"); }catch(e){}
+        if(data) toast("Couldn't reach the server — using the saved puzzle list.");
+      }
+      if(data){
         puzzleData=data;
         const today=todayStr();
         if(testDate&&data[testDate]&&testDate>today){
@@ -516,13 +549,22 @@ async function init(){
       }
     }catch(e){}
   }
-  if(!puzzle) puzzle=DEMO;
+  if(!puzzle){
+    puzzle=DEMO;
+    /* wanted the daily, got the fallback: SAY SO — an unlabeled practice board
+       that quietly skips streaks cost real players real streaks */
+    isDemoFB=!communityBid&&!testDate;
+  }
   await applyCrowdOrder();
   setupPlay();
   showView("play");
 }
 function setupPlay(){
-  document.getElementById("betaBanner").style.display=isBeta?"":"none";
+  const bb=document.getElementById("betaBanner");
+  if(isDemoFB){
+    bb.textContent="Couldn't load today's puzzle — this is a PRACTICE board and won't count. Refresh to try again.";
+    bb.style.display="";
+  } else bb.style.display=isBeta?"":"none";
   /* today's daily shows no date line at all; archived (past) puzzles get a dated pill */
   let sub="";
   if(dailyKey&&dailyKey!==todayStr()) sub=fmtDate(dailyKey);
@@ -562,6 +604,7 @@ async function checkNewDay(){
     if(r.ok){
       const data=await r.json();
       puzzleData=data;
+      try{ localStorage.setItem("x43_pdata",JSON.stringify(data)); }catch(e){}
       const keys=Object.keys(data).filter(k=>k<=todayStr()).sort();
       const k=keys.length?keys[keys.length-1]:null;
       if(k&&k!==dailyKey){
@@ -1723,7 +1766,7 @@ function endGame(won){
   renderMist();
   saveGame();
   const score=calcScore().score;
-  saveStats(won,score,mistakes);
+  if(!isDemoFB) saveStats(won,score,mistakes);
   recordHistory();
   showStreakTag();
   /* beta plays auto-report the solve result (stars/notes follow if they use the card) */
@@ -3097,7 +3140,11 @@ function recordHistory(){
     const prev=h[dailyKey];
     /* rel = "ever played this date on its release day." An archive replay must NOT
        downgrade a prior release-day play (that would silently break the streak). */
-    const rel = (dailyKey===todayStr()) || (prev && prev.rel!==0) ? 1 : 0;
+    /* startedOn: the local date the game began (startTime survives saves/
+       restores) — finishing a release-day board at 12:01am must still count */
+    const sd=new Date(startTime||Date.now());
+    const startedOn=sd.getFullYear()+"-"+String(sd.getMonth()+1).padStart(2,"0")+"-"+String(sd.getDate()).padStart(2,"0");
+    const rel = (dailyKey===todayStr()) || (startedOn===dailyKey) || (prev && prev.rel!==0) ? 1 : 0;
     h[dailyKey]={s:cs.score, m:mistakes, w:cs.won?1:0, ms:solveMs,
       hf:cs.hubFirst?1:0, hm:cs.hubMiddle?1:0, pf:cs.purpleFirst?1:0, bf:cs.blueFirst?1:0,
       rr:cs.revRainbow?1:0, rw:cs.rainbow?1:0, gr:cs.grellow?1:0, gu:cs.grue?1:0, gd:cs.godDamnit?1:0, db:cs.dayBefore?1:0,
@@ -3111,7 +3158,9 @@ function recordHistory(){
   try{
     if(window.x43beacon){
       const cs2=calcScore(), ct=catTelemetry();
-      x43beacon({p:dailyKey, rel:(dailyKey===todayStr())?1:0, w:cs2.won?1:0,
+      const bsd=new Date(startTime||Date.now());
+      const bStarted=bsd.getFullYear()+"-"+String(bsd.getMonth()+1).padStart(2,"0")+"-"+String(bsd.getDate()).padStart(2,"0");
+      x43beacon({p:dailyKey, rel:(dailyKey===todayStr()||bStarted===dailyKey)?1:0, w:cs2.won?1:0,
         m:mistakes, s:cs2.score, ms:solveMs, st:cs2.won?streakWithToday():0, ad:adClicked?1:0,
         adid:adClickedId||window.x43ad||"",   /* the ad they clicked, else the one on screen */
         fl:(cs2.revRainbow?1:0)|(cs2.rainbow?2:0)|(cs2.godDamnit?4:0)|(cs2.hubFirst?8:0)|
