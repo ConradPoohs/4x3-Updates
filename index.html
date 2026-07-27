@@ -252,6 +252,7 @@
     </div>
     <div id="commStats" style="display:none" class="card cstats" aria-label="How everyone did"></div>
     <div id="fbCard" style="display:none" class="card fb">
+      <div id="fbBody">
       <b>🧪 Beta feedback for the creator</b>
       <label style="display:block;margin-top:10px;font-size:14px">How hard was it? (1 = trivial, 5 = brutal)</label>
       <div class="stars" id="fbDiff"></div>
@@ -259,19 +260,19 @@
       <div id="fbCats" style="margin:4px 0 10px"></div>
       <label style="display:block;font-size:14px">How fun was it?</label>
       <div class="stars" id="fbFun"></div>
-      <label style="display:block;font-size:14px">Did you figure out the special word before the end?</label>
-      <div class="yn" id="fbSpecial">
-        <button onclick="fb.special='Yes';ynPaint()">Yes</button>
-        <button onclick="fb.special='No';ynPaint()">No</button>
-      </div>
-      <label style="display:block;font-size:14px;margin-bottom:4px">Notes for the creator</label>
-      <textarea id="fbNotes" placeholder="Too easy? A category felt unfair? A word fits two groups?"></textarea>
-      <label style="display:block;font-size:14px;margin:10px 0 4px">Your name or handle (optional)</label>
-      <input type="text" id="fbName" placeholder="So Hank knows who tested" autocomplete="nickname">
+      <label style="display:block;font-size:14px;margin-bottom:4px">Notes for Hank</label>
+      <textarea id="fbNotes"></textarea>
       <div class="rowbtns" style="margin-top:10px">
         <button class="hbtn primary" id="fbSend" onclick="sendFeedback()">Send feedback</button>
         <button class="hbtn" id="fbCopy" onclick="copyFeedback()">Copy</button>
         <a id="fbMail" class="hbtn" style="display:none;text-decoration:none">Email it</a>
+      </div>
+      </div>
+      <div id="fbDone" style="display:none;text-align:center;padding:14px 6px">
+        <div style="font-size:34px">✅</div>
+        <b style="display:block;font-size:17px;margin:6px 0 2px">Feedback sent — thank you!</b>
+        <div style="color:var(--mut);font-size:13.5px">Hank reads every one of these.</div>
+        <button class="hbtn" style="margin-top:12px" onclick="editFeedback()">Change my answers</button>
       </div>
     </div>
     <div id="crate" style="display:none" class="card fb">
@@ -576,6 +577,8 @@ function setupPlay(){
   ps.style.display=sub?"":"none"; /* no empty spacer when there's no date line */
   document.getElementById("result").style.display="none";
   document.getElementById("fbCard").style.display="none";
+  { const fbb=document.getElementById("fbBody"), fbd=document.getElementById("fbDone");
+    if(fbb){ fbb.style.display=""; fbb.style.opacity=""; } if(fbd) fbd.style.display="none"; }
   document.getElementById("solvedList").innerHTML="";
   startGame();
 }
@@ -759,6 +762,8 @@ function startGame(){
   document.getElementById("admireBack").style.display="none";
   document.getElementById("result").style.display="none";
   document.getElementById("fbCard").style.display="none";
+  { const fbb=document.getElementById("fbBody"), fbd=document.getElementById("fbDone");
+    if(fbb){ fbb.style.display=""; fbb.style.opacity=""; } if(fbd) fbd.style.display="none"; }
   { const cr=document.getElementById("crate"); cr.style.display="none"; crateDone=false; cRated=0; const t=document.getElementById("crateTitle"); if(t) t.textContent="Rate this puzzle"; const rl=document.getElementById("crateReport"); if(rl) rl.textContent="Report this puzzle"; }
   const cse=document.getElementById("commStats"); cse.style.display="none"; cse.innerHTML=""; commStatsShown=false;
   const hp=document.getElementById("humansPromo"); hp.style.display="none"; hp.classList.remove("in");
@@ -1772,9 +1777,8 @@ function endGame(won){
   /* beta plays auto-report the solve result (stars/notes follow if they use the card) */
   try{
     if(isBeta&&betaId&&window.x43beta){
-      let nm=""; try{ nm=localStorage.getItem("x43_name")||""; }catch(e){}
       const ct=catTelemetry();
-      x43beta({bp:betaId, hub:special, name:nm, w:won?1:0, m:mistakes, ms:solveMs,
+      x43beta({bp:betaId, hub:special, w:won?1:0, m:mistakes, ms:solveMs,
         so:ct.so, c:ct.c, cats:cats.map(c=>c.name)});
       /* completion marker for the tester portal (betaplay.html) — beta plays
          have no game save, so this is the only local trace a finish leaves */
@@ -2988,33 +2992,40 @@ function initFb(){
       fc.appendChild(row);
     });
   }
-  starPaint(); catStarPaint(); ynPaint();
+  starPaint(); catStarPaint();
   document.getElementById("fbMail").style.display=puzzle.e?"":"none";
-  try{ document.getElementById("fbName").value=localStorage.getItem("x43_name")||""; }catch(e){}
 }
-/* POST the card straight to the stats Worker (upserts, so re-sends just update) */
+/* POST the card straight to the stats Worker (upserts, so re-sends just update).
+   Anonymous by design — no name, no spotted-the-hub question. */
 function sendFeedback(){
-  const name=document.getElementById("fbName").value.trim();
-  try{ if(name) localStorage.setItem("x43_name",name); }catch(e){}
   try{
     if(window.x43beta&&betaId){
       const ct=catTelemetry();
-      x43beta({bp:betaId, hub:special, name:name,
+      x43beta({bp:betaId, hub:special,
         w:mistakes<MAXM?1:0, m:mistakes, ms:solveMs, so:ct.so,
         c:ct.c, r:fb.r.slice(), cats:cats.map(c=>c.name),
-        diff:fb.diff, fun:fb.fun, sp:(fb.special||"").toLowerCase(),
+        diff:fb.diff, fun:fb.fun,
         notes:document.getElementById("fbNotes").value.trim(), fb:1});
     }
   }catch(e){}
-  const b=document.getElementById("fbSend");
-  b.textContent="Sent — thank you ✓"; b.disabled=true;
-  setTimeout(()=>{ b.textContent="Send again"; b.disabled=false; },4000);
+  /* swap the form for a clear "sent" state (re-sends upsert, so editing is safe) */
+  const body=document.getElementById("fbBody"), done=document.getElementById("fbDone");
+  const reveal=()=>{ body.style.display="none"; body.style.opacity=""; done.style.display="";
+    if(G) G.fromTo(done,{opacity:0,y:8},{opacity:1,y:0,duration:.3,ease:"power1.out"}); };
+  if(G) G.to(body,{opacity:0,duration:.22,ease:"power1.in",onComplete:reveal});
+  else reveal();
   /* mark feedback-sent for the tester portal (betaplay.html) */
   try{
     const bd=JSON.parse(localStorage.getItem("x43_beta_done")||"{}");
     bd[betaId]={...(bd[betaId]||{}), fb:1, ts:Date.now()};
     localStorage.setItem("x43_beta_done",JSON.stringify(bd));
   }catch(e){}
+}
+function editFeedback(){
+  document.getElementById("fbDone").style.display="none";
+  const body=document.getElementById("fbBody");
+  body.style.display="";
+  if(G) G.fromTo(body,{opacity:0},{opacity:1,duration:.25});
 }
 function starPaint(){
   document.querySelectorAll("#fbDiff button").forEach((b,i)=>b.classList.toggle("on",i<fb.diff));
@@ -3024,9 +3035,6 @@ function catStarPaint(){
   document.querySelectorAll("#fbCats .stars").forEach((st,i)=>{
     st.querySelectorAll("button").forEach((b,j)=>b.classList.toggle("on",j<(fb.r[i]||0)));
   });
-}
-function ynPaint(){
-  document.querySelectorAll("#fbSpecial button").forEach(b=>b.classList.toggle("on",b.textContent===fb.special));
 }
 /* ---------- community puzzle rating ---------- */
 function hgAnon(){ try{ return localStorage.getItem("hg_anon")||""; }catch(e){ return ""; } }
@@ -3086,7 +3094,6 @@ function feedbackText(){
     "Result: "+(won?"solved":"failed")+" · "+(mistakes?mistakes+" mistake"+(mistakes===1?"":"s"):"No mistakes")+"\n"+
     "Difficulty: "+(fb.diff||"–")+"/5 · Fun: "+(fb.fun||"–")+"/5\n"+
     "Categories: "+cats.map((c,i)=>c.name+" "+(fb.r[i]||"–")+"/5").join(" · ")+"\n"+
-    "Spotted the special word early: "+(fb.special||"–")+"\n"+
     "Notes: "+(document.getElementById("fbNotes").value.trim()||"(none)")+"\n"+
     guesses.map(g=>g.map(w=>w===special?"⭐":EMOJI[cats.findIndex(c=>c.words.includes(w))]||"⬜").join("")).join("\n");
 }
