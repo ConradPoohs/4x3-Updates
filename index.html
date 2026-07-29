@@ -389,6 +389,10 @@ let startTime=0, solveMs=null; /* speed timer: starts on load, stops at the fini
    community-stats panel always translate back to AUTHORED indices so the
    measurement can't feed on its own output. */
 let catPerm=[0,1,2,3];
+/* slot colors are fixed (0 blue, 1 green, 2 yellow, 3 purple) and difficulty
+   runs yellow → green → blue → purple, so difficulty rank r maps to slot
+   DIFF[r]. (It's an involution: DIFF[DIFF[r]]===r.) Same constant as HQ's. */
+const DIFF=[2,1,0,3];
 let crowdState="unknown";   /* "pre" = played before 150 finishers (measurement crew) |
                                "set" = crowd order applied | "same" = crowd agreed with
                                the authored order | "unknown" = fetch failed / n-a */
@@ -414,8 +418,13 @@ async function applyCrowdOrder(){
     const j=await r.json();
     if(j&&j.ok){
       if(Array.isArray(j.order)){
-        crowdState=(j.order.join("")==="0123")?"same":"set";
-        applyCatOrder(j.order);
+        /* order = authored slots easiest→hardest; the r-th easiest belongs at
+           slot DIFF[r] (easiest=yellow … hardest=purple), NOT at slot r —
+           getting this wrong shipped the crowd's easiest category as blue */
+        const perm=[0,1,2,3];
+        j.order.forEach((a,r)=>{ perm[DIFF[r]]=a; });
+        crowdState=(perm.join("")==="0123")?"same":"set";
+        applyCatOrder(perm);
       } else crowdState="pre";      /* fewer than 150 finishers: this player IS the measurement */
     }
   }catch(e){}                                            /* authored order is always a fine fallback */
@@ -2075,10 +2084,13 @@ function csPageToday(){
 function csPageSort(){
   const so=catTelemetry().so;                       /* your real solve order (display idx) */
   const crowdKnown=(crowdState==="set"||crowdState==="same");
-  const rows=[0,1,2,3].map(di=>{
+  /* rows in difficulty order (yellow→purple); ranks translate through DIFF:
+     a slot's difficulty rank is DIFF[slot], an authored category's intended
+     rank is DIFF[authoredIdx] */
+  const rows=DIFF.map(di=>{
     const you=so.indexOf(di);
     return "<div class='cs-row'><span class='cs-name'><span class='dotc' style='background:"+COLORS[di]+"'></span>"+esc(cats[di].name)+"</span>"+
-      "<span class='cs-trio'>Hank "+CS_RANK[catPerm[di]]+" · Crowd "+(crowdKnown?CS_RANK[di]:"—")+
+      "<span class='cs-trio'>Hank "+CS_RANK[DIFF[catPerm[di]]]+" · Crowd "+(crowdKnown?CS_RANK[DIFF[di]]:"—")+
       " · You "+(you>=0?CS_RANK[you]:"never")+"</span></div>";
   }).join("");
   let verdict;
