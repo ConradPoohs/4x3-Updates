@@ -2061,7 +2061,12 @@ function csGo(i,first){
   page.innerHTML=CS_PAGES[CS_PAGE].f();
   document.getElementById("csDots").innerHTML=CS_PAGES.map((p,k)=>
     "<i class='"+(k===CS_PAGE?"on":"")+"' title='"+esc(p.t)+"'></i>").join("");
-  if(!first&&G) G.from(page,{opacity:0,x:8,duration:.25,ease:"power1.out"});
+  if(!first&&G){
+    /* interrupted .from() tweens capture a mid-fade value as the destination
+       and leave the card stuck translucent — kill and land at exactly 1 */
+    G.killTweensOf(page);
+    G.fromTo(page,{opacity:0,x:8},{opacity:1,x:0,duration:.25,ease:"power1.out",clearProps:"opacity,transform"});
+  }
 }
 const CS_RANK=["1st","2nd","3rd","4th"];
 /* card 1 — today: difficulty meter, first-solved, mistake spread (the classic card) */
