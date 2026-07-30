@@ -2080,27 +2080,59 @@ function csPageToday(){
     "<div class='cs-sec'><div class='cs-label'>First category solved</div>"+firstRows+"</div>"+
     "<div class='cs-sec'><div class='cs-label'>How it went</div>"+mistRows+"</div>";
 }
-/* card 2 — the sort: Hank's difficulty call vs the crowd's vs your path */
+/* card 2 — the sort: slopegraph. Hank's predicted ranks on the left, the
+   crowd's measured ranks on the right, one line per category — crossings ARE
+   the disagreement. Player's own path as a dot trail below. */
 function csPageSort(){
-  const so=catTelemetry().so;                       /* your real solve order (display idx) */
   const crowdKnown=(crowdState==="set"||crowdState==="same");
-  /* rows in difficulty order (yellow→purple); ranks translate through DIFF:
-     a slot's difficulty rank is DIFF[slot], an authored category's intended
-     rank is DIFF[authoredIdx] */
-  const rows=DIFF.map(di=>{
-    const you=so.indexOf(di);
-    return "<div class='cs-row'><span class='cs-name'><span class='dotc' style='background:"+COLORS[di]+"'></span>"+esc(cats[di].name)+"</span>"+
-      "<span class='cs-trio'>Hank "+CS_RANK[DIFF[catPerm[di]]]+" · Crowd "+(crowdKnown?CS_RANK[DIFF[di]]:"—")+
-      " · You "+(you>=0?CS_RANK[you]:"never")+"</span></div>";
-  }).join("");
-  let verdict;
-  if(!crowdKnown) verdict="The crowd's ranking is still being charted — you're early.";
-  else if(crowdState==="same") verdict="Hank called it: the crowd agreed with his difficulty sort.";
-  else verdict="The crowd overruled Hank's sort — the colors above are the people's ranking.";
-  const hardest=cats[3]?cats[3].name:"";
-  const youHard=so.length===4&&so[0]===3?" You cracked "+esc(hardest)+" first, you menace.":"";
-  return "<div class='cs-sec'><div class='cs-label'>Ranked easiest → hardest</div>"+rows+"</div>"+
-    "<p class='cs-note'>"+verdict+youHard+"</p>";
+  const so=catTelemetry().so;
+  const short=t=>{ t=String(t); return t.length>16?t.slice(0,15)+"…":t; };
+  let main="";
+  if(crowdKnown){
+    /* per display slot: hank rank (left y), crowd rank (right y), color */
+    const Y=r=>20+r*31;
+    let lines="",ldots="",rdots="",lnames="";
+    let hits=0;
+    [0,1,2,3].forEach(di=>{
+      const hr=DIFF[catPerm[di]], cr=DIFF[di];
+      if(hr===cr) hits++;
+      lines+="<line x1='108' y1='"+Y(hr)+"' x2='206' y2='"+Y(cr)+"' stroke='"+COLORS[di]+"' stroke-width='2.5'/>";
+      ldots+="<circle cx='108' cy='"+Y(hr)+"' r='6' fill='"+COLORS[di]+"'/>";
+      rdots+="<circle cx='206' cy='"+Y(cr)+"' r='6' fill='"+COLORS[di]+"'/>";
+      lnames+="<text x='98' y='"+(Y(hr)+4)+"' text-anchor='end' font-size='11.5' style='fill:var(--mut4)'>"+esc(short(cats[di].name))+"</text>";
+    });
+    const rlabs="<text x='218' y='"+(Y(0)+4)+"' font-size='10.5' style='fill:var(--mut3)'>EASIEST</text>"+
+                "<text x='218' y='"+(Y(3)+4)+"' font-size='10.5' style='fill:var(--mut3)'>HARDEST</text>";
+    const caption=hits===4?"Four parallel lines — Hank called every rank."
+      :hits===0?"Total overrule: the crowd disagreed on every rank."
+      :"Crossed lines = the crowd overruled Hank ("+hits+" of 4 held).";
+    main="<div class='cs-slopehead'><span>Hank's call</span><span>The crowd</span></div>"+
+      "<svg viewBox='0 0 290 126' class='cs-slope' role='img' aria-label='Hank\\u2019s predicted difficulty vs the crowd\\u2019s'>"+
+      lines+ldots+rdots+lnames+rlabs+"</svg>"+
+      "<p class='cs-note' style='margin-top:8px'>"+caption+"</p>";
+  } else {
+    const rows=DIFF.map((di,r)=>
+      "<div class='cs-srow'><span class='cs-srank'>"+["Easiest","2nd","3rd","Hardest"][r]+"</span>"+
+      "<span class='dotc' style='background:"+COLORS[di]+"'></span>"+
+      "<span class='cs-sname'>"+esc(cats[di].name)+"</span></div>").join("");
+    main="<div class='cs-label'>Hank's difficulty ranking — the crowd is still voting</div>"+rows;
+  }
+  /* your path */
+  let path="";
+  if(so.length){
+    const dots=so.map(di=>"<span class='cs-pdot' style='background:"+COLORS[di]+"'></span>")
+      .join("<span class='cs-parr'>→</span>");
+    const missed=[0,1,2,3].filter(di=>so.indexOf(di)<0)
+      .map(di=>"<span class='cs-pdot miss' style='border-color:"+COLORS[di]+"'></span>").join("");
+    let verdict="Your own route.";
+    if(so.length===4&&so.every((di,r)=>di===DIFF[r])) verdict="Straight up the ladder, easiest to hardest.";
+    else if(so[0]===3) verdict="Purple first. Menace.";
+    else if(so.length===4&&so.every((di,r)=>di===DIFF[3-r])) verdict="Top-down?! Hardest first, the whole way.";
+    path="<div class='cs-sec'><div class='cs-label'>Your path</div>"+
+      "<div class='cs-path'>"+dots+(missed?"<span class='cs-parr'>·</span>"+missed:"")+"</div>"+
+      "<p class='cs-note' style='margin-top:6px'>"+verdict+"</p></div>";
+  }
+  return "<div class='cs-sec'>"+main+"</div>"+path;
 }
 /* card 3 — slips: the crowd's most common wrong groupings */
 function csPageSlips(){
