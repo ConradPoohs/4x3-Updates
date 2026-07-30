@@ -2085,7 +2085,9 @@ function csPageToday(){
    the disagreement. Player's own path as a dot trail below. */
 function csPageSort(){
   const crowdKnown=(crowdState==="set"||crowdState==="same");
-  const so=catTelemetry().so;
+  /* ct.so is a digit STRING ("2013") — parse before array ops. This same
+     assumption already caused one stats blackout. Third time's a charm. */
+  const so=String(catTelemetry().so).split("").filter(ch=>/[0-3]/.test(ch)).map(Number);
   const short=t=>{ t=String(t); return t.length>16?t.slice(0,15)+"…":t; };
   let main="";
   if(crowdKnown){
