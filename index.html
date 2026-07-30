@@ -382,7 +382,8 @@ let debugStreak=0; /* streak-preview override (set from the test menu) — never
 let isDemoFB=false;  /* daily wanted but unreachable → practice board, nothing counts */
 let adClicked=false;   /* ad-click tracking (stats only — no points) */
 let adClickedId="";    /* which ad they tapped (for the stats beacon) */
-let startTime=0, solveMs=null; /* speed timer: starts on load, stops at the finish */
+let startTime=0, solveMs=null; /* speed timer: starts on FIRST INTERACTION, stops at the finish
+   (a page load is not a decision — reloading stale tabs was inflating times) */
 /* crowd-defined difficulty: catPerm[displayIdx] = authored category index.
    Identity until /dorder says otherwise; locked into the day's save so the
    board never re-shuffles under a returning player. Telemetry and the
@@ -695,7 +696,7 @@ function restoreGame(st){
   mistakes=Math.min(MAXM,st.m||0);
   adClicked=!!st.ad; adClickedId=st.adi||"";
   penalty=(st.p!==undefined)?st.p:(st.m||0)*15;
-  startTime=st.t0||Date.now(); solveMs=(st.sms!==undefined)?st.sms:null;
+  startTime=st.t0||0; solveMs=(st.sms!==undefined)?st.sms:null;   /* 0 stays 0: untouched boards stay unclocked across reloads */
   guesses=Array.isArray(st.g)?st.g:[];
   clicks=st.ck||0;   /* 0 on pre-feature saves → click awards simply don't fire */
   oaCount=st.oa||0;
@@ -764,7 +765,7 @@ function startGame(){
   selection=[]; solvedIdx=[]; colorCat={}; locked=new Set();
   mistakes=0; penalty=0; guesses=[]; over=false; animating=false; adClicked=false; adClickedId=""; oaCount=0; wrongTrios=[];
   clicks=0; debugStreak=0;
-  startTime=Date.now(); solveMs=null;
+  startTime=0; solveMs=null;   /* 0 = clock not started; first tap starts it */
   fb={diff:0,fun:0,special:"",r:[0,0,0,0]};
   document.getElementById("boardWrap").style.display="";
   document.getElementById("postHub").style.display="none";
@@ -1375,7 +1376,15 @@ function hubSmashed(){
   hubSmash++;
   if(hubSmash%20!==0) return;   /* every 20th post-game hub smash */
   try{
-    if(!localStorage.getItem("x43_bsmash")){
+    /* self-healing: the flag could be consumed invisibly (the toast used to
+       render off-screen — Safari players had heads forever, hammer never).
+       If no history entry ever actually carried the badge, re-arm it. */
+    let armed=!localStorage.getItem("x43_bsmash");
+    if(!armed){
+      const hh=JSON.parse(localStorage.getItem("x43_history")||"{}");
+      if(!Object.keys(hh).some(k=>hh[k]&&hh[k].bs)) armed=true;
+    }
+    if(armed){
       localStorage.setItem("x43_bsmash",dailyKey||todayStr());
       /* the history entry was written at game end — stamp the flag onto it */
       if(dailyKey){
@@ -1450,14 +1459,17 @@ function hubPop(){
     } else { e.remove(); }
   }
 }
-let pendingTap=null;
+let pendingTap=[];
 function flushPendingTap(){
-  const p=pendingTap; pendingTap=null;
-  if(p&&!over&&!animating&&!locked.has(p)&&tiles[p]) tapWord(p);
+  /* a QUEUE, not a single slot: keeping only the last mid-animation tap
+     scrambled tap ORDER (hub tapped first, then words → hub dropped → the
+     hub-first bonus silently unearnable for fast players) */
+  const q=pendingTap.slice(); pendingTap=[];
+  for(const p of q){ if(!over&&!animating&&!locked.has(p)&&tiles[p]) tapWord(p); }
 }
 function tapWord(w){
   if(over){ if(w===special){ hubPop(); hubSmashed(); } return; }   /* finished board: hub is an emoji button */
-  if(animating&&!locked.has(w)){ pendingTap=w; return; }   /* taps mid-animation queue instead of vanishing */
+  if(animating&&!locked.has(w)){ if(pendingTap.length<3) pendingTap.push(w); return; }   /* taps mid-animation queue IN ORDER */
   if(animating||locked.has(w)) return;
   const i=selection.indexOf(w);
   if(i>=0) selection.splice(i,1);
@@ -1470,6 +1482,7 @@ function tapWord(w){
       toast("All four categories share a word",3600);
   }
   else return;
+  if(!startTime) startTime=Date.now();   /* the first real decision starts the clock */
   clicks++;   /* only taps that changed the selection count */
   if(G) G.fromTo(tiles[w].querySelector(".tin"),{scale:.95},{scale:1,duration:.3,ease:"back.out(2.5)"});
   paintTiles(); updateButtons();
@@ -1527,7 +1540,7 @@ function submitGuess(){
 function solveAnim(ci,sel){
   /* the 4th solve ENDS the game: stop the clock at the press, not after the
      ~1.3s landing animation (players watched themselves tick past medal cuts) */
-  if(solvedIdx.length===3&&solveMs===null) solveMs=Date.now()-startTime;
+  if(solvedIdx.length===3&&solveMs===null&&startTime) solveMs=Date.now()-startTime;
   animating=true; updateButtons();
   selection=[];
   const after=()=>{
@@ -1575,7 +1588,7 @@ function wrongAnim(sel,oneAway){
      On the fatal third, mark the game over in the save too, so a reload during
      the shake restores a finished loss instead of a resurrectable board. */
   selection=[];
-  if(mistakes>=MAXM){ over=true; if(solveMs===null) solveMs=Date.now()-startTime; } /* clock stops at the fatal press too */
+  if(mistakes>=MAXM){ over=true; if(solveMs===null&&startTime) solveMs=Date.now()-startTime; } /* clock stops at the fatal press too */
   if(oneAway) oaCount++;
   if(wrongTrios.length<3) wrongTrios.push(sel.slice());   /* the actual words, for the crowd's "common wrong groupings" */
   saveGame();
@@ -1765,7 +1778,7 @@ function shineHub(){
 }
 function endGame(won){
   over=true;
-  if(solveMs===null) solveMs=Date.now()-startTime;
+  if(solveMs===null) solveMs=startTime?Date.now()-startTime:0;
   if(!won){
     cats.forEach((c,i)=>{ if(!solvedIdx.includes(i)){ solvedIdx.push(i); for(const w of c.words){colorCat[w]=i;} } });
   }
@@ -2146,7 +2159,7 @@ function csPageSlips(){
   const d=CS_D;
   const wr=(Array.isArray(d.wrongs)?d.wrongs:[]).filter(w=>w&&w.trio&&w.n>=3);
   const mine=new Set(wrongTrios.map(t=>t.map(w=>String(w).toLowerCase()).sort().join("|")));
-  const myTot=catTelemetry().c.reduce((a,b)=>a+b,0);
+
   if(!wr.length)
     return "<p class='cs-note'>Not enough wrong guesses recorded yet today — the crowd's most tempting traps show up here as people fall into them.</p>";
   const rows=wr.map(w=>{
@@ -2161,7 +2174,14 @@ function csPageSlips(){
   }).join("");
   const oa=(d.oan>0)?"<p class='cs-note'>"+(+d.oan).toLocaleString()+" “One away!” heartbreaks across the crowd today"+
     (oaCount>0?" — "+oaCount+" of them yours.":".")+"</p>":"";
-  const yours=myTot===0?"<p class='cs-note'>You fell for none of them. Show-off.</p>":"";
+  /* single source of truth: wrongTrios (the same data the "You too" badges
+     use). catTelemetry().c leaves ambiguous slips unattributed, which called
+     players with messy wrong guesses "Show-off" — 7 reports. */
+  const yours=mine.size===0
+    ?"<p class='cs-note'>You fell for none of them. Show-off.</p>"
+    :(!wr.some(w=>mine.has(w.trio))
+      ?"<p class='cs-note'>None of your wrong guesses made the leaderboard. Too original.</p>"
+      :"");
   return "<div class='cs-sec'><div class='cs-label'>Today's most tempting wrong groups</div>"+rows+"</div>"+oa+yours;
 }
 /* card 4 — scores & speed: today's curve with your marker, solver count, early-bird */
@@ -2190,10 +2210,13 @@ function csPageScores(){
     let before=0,all=0;
     for(let h=0;h<24;h++){ const c=d["h"+h]||0; all+=c; if(h<myH) before+=c; }
     if(all>50&&myH>0){ const pct=Math.round(100*(1-before/all));
-      if(pct>=60) early="<p class='cs-note'>You finished earlier than about "+pct+"% of today's players.</p>"; }
+      /* clock-of-day stat, NOT a speed stat — it used to sit under the solve-
+         times chart saying "finished earlier", telling 10-minute solvers they
+         beat 94% of the field (hi Cate) */
+      if(pct>=60) early="<p class='cs-note'>Early bird: you played before about "+pct+"% of today's players even showed up.</p>"; }
   }
-  return "<div class='cs-sec'><div class='cs-label'>Today's winning scores</div>"+scoreRows+"</div>"+avgLine+
-    (speedRows?"<div class='cs-sec'><div class='cs-label'>Solve times</div>"+speedRows+"</div>":"")+early;
+  return "<div class='cs-sec'><div class='cs-label'>Today's winning scores</div>"+scoreRows+"</div>"+avgLine+early+
+    (speedRows?"<div class='cs-sec'><div class='cs-label'>Solve times</div>"+speedRows+"</div>":"");
 }
 /* card 5 — lifetime: your whole 4×3 career, plus where your streak sits all-time */
 function csPageLifetime(){
@@ -3202,7 +3225,17 @@ function recordHistory(){
        restores) — finishing a release-day board at 12:01am must still count */
     const sd=new Date(startTime||Date.now());
     const startedOn=sd.getFullYear()+"-"+String(sd.getMonth()+1).padStart(2,"0")+"-"+String(sd.getDate()).padStart(2,"0");
-    const rel = (dailyKey===todayStr()) || (startedOn===dailyKey) || (prev && prev.rel!==0) ? 1 : 0;
+    const releaseEligible = (dailyKey===todayStr()) || (startedOn===dailyKey);
+    if(prev && !releaseEligible){
+      /* archive REPLAY of an already-recorded day: history is a record, not a
+         sandbox. Overwriting let players rewrite old losses as wins and
+         resurrect dead streaks (KPH's 20-day necromancy). Keep the original
+         result; only the timestamp moves. */
+      h[dailyKey]={...prev, ts:Date.now()};
+      localStorage.setItem("x43_history",JSON.stringify(h));
+      return;   /* no beacon either — the server row must not be rewritten */
+    }
+    const rel = releaseEligible || (prev && prev.rel!==0) ? 1 : 0;
     h[dailyKey]={s:cs.score, m:mistakes, w:cs.won?1:0, ms:solveMs,
       hf:cs.hubFirst?1:0, hm:cs.hubMiddle?1:0, pf:cs.purpleFirst?1:0, bf:cs.blueFirst?1:0,
       rr:cs.revRainbow?1:0, rw:cs.rainbow?1:0, gr:cs.grellow?1:0, gu:cs.grue?1:0, gd:cs.godDamnit?1:0, db:cs.dayBefore?1:0,
@@ -3330,7 +3363,14 @@ function toast(msg,ms){
   }
   /* land on the centre of the 4×3 logo (falls back to the header if missing) */
   const aim=document.querySelector("header .logo, header h1, header");
-  if(aim){ const r=aim.getBoundingClientRect(); if(r.height) t.style.top=Math.round(r.top+r.height/2)+"px"; }
+  if(aim){ const r=aim.getBoundingClientRect();
+    /* the logo is in VIEWPORT coords; scrolled down, its centre is negative
+       and the toast rendered above the screen (unreadable on mobile). Clamp
+       into the visible band instead. */
+    let y=r.height?Math.round(r.top+r.height/2):70;
+    y=Math.max(60,Math.min(y,Math.round(window.innerHeight*0.4)));
+    t.style.top=y+"px";
+  }
   t.textContent=msg; t.classList.add("show");
   t._x=setTimeout(()=>{
     t.classList.add("fly");                                  /* settle, then shoot up-and-off right */
