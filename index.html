@@ -2408,7 +2408,17 @@ let statsScrollPending=false;
 function scrollToStats(){
   statsScrollPending=false;
   const el=document.getElementById("commStats");
-  if(el&&el.style.display!=="none"){ try{ el.scrollIntoView({behavior:reduceMotion()?"auto":"smooth",block:"start"}); }catch(e){} }
+  if(!el||el.style.display==="none") return;
+  /* smooth scrolling can silently no-op (throttled compositor ticks — seen on
+     Chrome 150/mac). Try it for the polish, then VERIFY: if the page hasn't
+     moved shortly after, jump instantly. The button must never feel dead. */
+  const y0=window.scrollY;
+  try{ el.scrollIntoView({behavior:reduceMotion()?"auto":"smooth",block:"start"}); }catch(e){}
+  setTimeout(()=>{
+    if(Math.abs(window.scrollY-y0)<8&&el.getBoundingClientRect().top>60){
+      try{ el.scrollIntoView({behavior:"auto",block:"start"}); }catch(e){}
+    }
+  },250);
 }
 function hubStats(){
   /* scroll fires when the panel actually reveals — a fixed 350ms timer lost
