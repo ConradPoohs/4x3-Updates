@@ -2017,6 +2017,7 @@ function showCommStats(){
   const reveal=()=>{
     el.style.display="";
     if(G) G.from(el,{opacity:0,y:14,duration:.5,ease:"power2.out"});
+    if(statsScrollPending) scrollToStats();   /* the Stats button was waiting on us */
   };
   x43stats(dailyKey).then(d=>{
     if(!d||!d.ok) return;
@@ -2403,10 +2404,20 @@ function admirePuzzle(){
   layout(true);
 }
 function backToHub(){ showPostHub(); }
+let statsScrollPending=false;
+function scrollToStats(){
+  statsScrollPending=false;
+  const el=document.getElementById("commStats");
+  if(el&&el.style.display!=="none"){ try{ el.scrollIntoView({behavior:reduceMotion()?"auto":"smooth",block:"start"}); }catch(e){} }
+}
 function hubStats(){
+  /* scroll fires when the panel actually reveals — a fixed 350ms timer lost
+     the race against a cold /p fetch (~500ms), eating the first click */
+  const el=document.getElementById("commStats");
+  if(el&&el.style.display!=="none"){ scrollToStats(); return; }  /* already visible */
+  statsScrollPending=true;
   showCommStats();
-  setTimeout(()=>{ const el=document.getElementById("commStats");
-    if(el&&el.style.display!=="none"){ try{ el.scrollIntoView({behavior:reduceMotion()?"auto":"smooth",block:"start"}); }catch(e){} } },350);
+  setTimeout(()=>{ if(statsScrollPending&&document.getElementById("commStats").style.display!=="none") scrollToStats(); },600); /* belt for edge paths */
 }
 let modalLastFocus=null;
 function openModal(fancy){
