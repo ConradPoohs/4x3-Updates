@@ -409,7 +409,14 @@ async function applyCrowdOrder(){
   /* a board already in progress keeps the ordering it started with */
   try{
     const sv=JSON.parse(localStorage.getItem("x43_game_"+dailyKey)||"null");
-    if(sv){ if(Array.isArray(sv.perm)) applyCatOrder(sv.perm); return; }
+    if(sv){
+      if(Array.isArray(sv.perm)) applyCatOrder(sv.perm);
+      /* restore what we KNEW, too — without this a refresh forgot the crowd
+         ranking existed and the sort card fell back to "still voting".
+         Old saves without cst: a non-identity perm proves the crowd spoke. */
+      crowdState=sv.cst||((Array.isArray(sv.perm)&&sv.perm.join("")!=="0123")?"set":"unknown");
+      return;
+    }
   }catch(e){}
   try{
     const ctl=new AbortController();
@@ -670,7 +677,7 @@ function loadGame(){
 }
 function saveGame(){
   const k=gameKey(); if(!k) return;
-  const payload=JSON.stringify({v:1,s:special,slots0,slots,sel:selection,solved:solvedIdx,m:mistakes,p:penalty,g:guesses,over,t0:startTime,sms:solveMs,ad:adClicked?1:0,adi:adClickedId,ck:clicks,perm:catPerm,oa:oaCount,wt:wrongTrios});
+  const payload=JSON.stringify({v:1,s:special,slots0,slots,sel:selection,solved:solvedIdx,m:mistakes,p:penalty,g:guesses,over,t0:startTime,sms:solveMs,ad:adClicked?1:0,adi:adClickedId,ck:clicks,perm:catPerm,cst:crowdState,oa:oaCount,wt:wrongTrios});
   try{ localStorage.setItem(k,payload); }
   catch(e){
     /* quota? the share-card JPEG cache is the only big regenerable thing we
@@ -1367,6 +1374,12 @@ const DEFS={
     "The Prevailing Mood":{MOOD:"The general emotional tone of a place or moment.",ATMOSPHERE:"The overall feeling or vibe of a setting.",CLIMATE:"The prevailing attitude of a group, as in the political ___."},
     "___ Change":{SEA:"A sea change is a broad, dramatic transformation.",LOOSE:"Loose change is the coins rattling around in your pocket.",CLIMATE:"This kind of change is the long-term shift in global weather patterns."},
     "Ends in a Word for a Friend":{RALLY:"Ends in ALLY, someone who takes your side.",EPISCOPAL:"Ends in PAL, a casual word for a buddy.",CLIMATE:"Ends in MATE, British slang for a friend."}
+  },
+  ROCKY:{
+    "Unsteady or Shaky":{WOBBLY:"Unsteady and likely to tip or fall over.",SHAKY:"Trembling or unstable, not firm.",ROCKY:"Bumpy and turbulent, like a difficult start to a relationship."},
+    "Project Hail Mary Characters":{GRACE:"Ryland Grace, the science-teacher astronaut.",STRATT:"Eva Stratt, the no-nonsense official.",ROCKY:"The spider-like Eridian engineer and best friend."},
+    "Rocky II Characters":{APOLLO:"Apollo Creed, the champion.",ADRIAN:"The shy sweetheart.",ROCKY:"The Philadelphia underdog."},
+    "Rocky and Bullwinkle Characters":{BULLWINKLE:"The dim-witted but lovable cartoon moose.",BORIS:"Boris Badenov, the bumbling spy.",ROCKY:"The plucky flying squirrel."}
   }
 };
 /* post-game easter egg: tap the hub to press it in and burst out emojis */
