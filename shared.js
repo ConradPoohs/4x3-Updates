@@ -134,6 +134,9 @@ function validPuzzle(p){
 function decPuzzle(str){
   const p=JSON.parse(b64d(str));
   if(!validPuzzle(p)) throw new Error("bad");
+  /* older builder links carried the creator's email as p.e — scrub it so the
+     game never surfaces an address, even from links minted before the fix */
+  delete p.e;
   return p;
 }
 

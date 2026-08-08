@@ -265,7 +265,6 @@
       <div class="rowbtns" style="margin-top:10px">
         <button class="hbtn primary" id="fbSend" onclick="sendFeedback()">Send feedback</button>
         <button class="hbtn" id="fbCopy" onclick="copyFeedback()">Copy</button>
-        <a id="fbMail" class="hbtn" style="display:none;text-decoration:none">Email it</a>
       </div>
       </div>
       <div id="fbDone" style="display:none;text-align:center;padding:14px 6px">
@@ -3092,7 +3091,6 @@ function initFb(){
     });
   }
   starPaint(); catStarPaint();
-  document.getElementById("fbMail").style.display=puzzle.e?"":"none";
 }
 /* POST the card straight to the stats Worker (upserts, so re-sends just update).
    Anonymous by design — no name, no spotted-the-hub question. */
@@ -3198,10 +3196,6 @@ function feedbackText(){
 }
 function copyFeedback(){
   copyText(feedbackText(),document.getElementById("fbCopy"));
-  if(puzzle.e){
-    document.getElementById("fbMail").href="mailto:"+puzzle.e+"?subject="+
-      encodeURIComponent("4×3 beta feedback")+"&body="+encodeURIComponent(feedbackText());
-  }
 }
 
 

@@ -25,8 +25,6 @@
       <div><label>Game date</label><input id="bDate" type="date" oninput="validateBuilder()"></div>
       <div><label>Your name</label><input id="bAuthor" placeholder="optional" oninput="validateBuilder()"></div>
     </div>
-    <label>Your email (optional — beta testers can email feedback to it)</label>
-    <input id="bEmail" type="email" placeholder="you@example.com" oninput="validateBuilder()">
     <label style="color:#b8860b">Special word (in all four categories)</label>
     <input id="bSpecial" placeholder="e.g. MERCURY" oninput="validateBuilder()">
     <label>Hub emoji (optional — bursts out when players tap the center card after winning)</label>
@@ -97,7 +95,7 @@ function val(id){return document.getElementById(id).value.trim();}
 function readBuilder(){
   const c=[];
   for(let i=0;i<4;i++) c.push([val("bCat"+i),val("bW"+i+"a"),val("bW"+i+"b")]);
-  const o={a:val("bAuthor"),e:val("bEmail"),s:val("bSpecial"),c};
+  const o={a:val("bAuthor"),s:val("bSpecial"),c};   /* no email: puzzle links are public, so the payload must never carry one */
   const x=val("bEmoji"); if(x) o.x=x;   /* only carry an emoji when one's supplied */
   return o;
 }
@@ -115,7 +113,6 @@ function validateBuilder(){
   for(const w of words){ if(seen[w]) dupes.add(w); seen[w]=1; }
   if(dupes.size) errs.push("Repeated across categories: "+[...dupes].join(", ")+". Only the special word may repeat — and it shouldn't be typed here.");
   if(p.s&&words.includes(norm(p.s))) errs.push("“"+norm(p.s)+"” is the special word — don't also list it inside a category. It's added to all four automatically.");
-  if(p.e&&!/^\S+@\S+\.\S+$/.test(p.e)) errs.push("That email doesn't look right.");
   if(!val("bDate")) errs.push("Pick a date for the daily game.");
   const v=document.getElementById("vList");
   if(errs.length){
