@@ -13,6 +13,7 @@
        Light values = the TINTS / COLORS / MIDC constants in shared.js. */
     --t0:#e8effc; --t1:#e6f4ea; --t2:#fcf3d7; --t3:#f1e8fa;
     --tc0:#5b8def; --tc1:#56b870; --tc2:#e7b416; --tc3:#a06ee1;
+    --td0:#2f5aa8; --td1:#2c6e44; --td2:#8a6d12; --td3:#5f3b91;   /* dark per-category text for pale tints */
     --m0:#b1c9f7; --m1:#b3dcc0; --m2:#f3da8e; --m3:#d2b9f0;
     --soft:#f1ece2;   /* hover / soft chip fill */
     --soft2:#f4efe6;  /* #pSub pill fill */
@@ -34,6 +35,7 @@
     --soft:#2a2a2a; --soft2:#262626; --soft3:#2a2a2a; --card2:#262626; --rule:#333333;
     --t0:#1c2942; --t1:#1c3526; --t2:#3a2f10; --t3:#2f2145;
     --tc0:#8ab1f7; --tc1:#7cd39d; --tc2:#f0c94f; --tc3:#c9a3f5;
+    --td0:#8ab1f7; --td1:#7cd39d; --td2:#f0c94f; --td3:#c9a3f5;
     --m0:#31486e; --m1:#2b4d36; --m2:#5b4718; --m3:#463063;
   }
   @media (prefers-color-scheme: dark){ html:not(.light){
@@ -42,6 +44,7 @@
     --soft:#2a2a2a; --soft2:#262626; --soft3:#2a2a2a; --card2:#262626; --rule:#333333;
     --t0:#1c2942; --t1:#1c3526; --t2:#3a2f10; --t3:#2f2145;
     --tc0:#8ab1f7; --tc1:#7cd39d; --tc2:#f0c94f; --tc3:#c9a3f5;
+    --td0:#8ab1f7; --td1:#7cd39d; --td2:#f0c94f; --td3:#c9a3f5;
     --m0:#31486e; --m1:#2b4d36; --m2:#5b4718; --m3:#463063;
   } }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
