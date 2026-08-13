@@ -2229,11 +2229,10 @@ function csPageSort(){
   const short=t=>{ t=String(t); return t.length>16?t.slice(0,15)+"…":t; };
   let main="";
   if(crowdKnown){
-    /* left: a PILL in the colour Hank originally ranked it, with the FULL
-       category name (two balanced lines when needed, never truncated);
-       right: the crowd's dot; the line is a gradient from his call to
-       theirs — agreement stays one colour, an overrule shifts hue. */
-    const wrap2=t=>{                              /* balanced ≤2-line word wrap */
+    /* full pills on BOTH sides: your ranking on the left, the crowd's on the
+       right, each pill tinted for the colour it holds in that ranking. The
+       gradient line runs flush edge-to-edge between them. */
+    const wrap2=t=>{
       t=String(t); if(t.length<=14) return [t];
       const w=t.split(" "); let best=[t,""], bd=1e9;
       for(let i=1;i<w.length;i++){
@@ -2243,36 +2242,37 @@ function csPageSort(){
       }
       return best[1]?best:[t];
     };
-    const fsz=l=>Math.min(10.5, l<=15?10.5:10.5*15/l);   /* shrink long lines */
+    const fsz=l=>Math.min(10.5, l<=15?10.5:10.5*15/l);
     const STEP=42, Y=r=>26+r*STEP;
-    const PX1=120, PX2=283;   /* flush with the pill edge → long run to the dot */
-    let defs="",lines="",lpills="",rdots="";
+    const LX=4, PW=116, RX=260;                 /* left pill, width, right pill */
+    const pill=(x,yc,slot,name)=>{
+      const ls=wrap2(name), ph=ls.length>1?36:26;
+      let t="";
+      if(ls.length===1)
+        t="<text x='"+(x+PW/2)+"' y='"+(yc+4)+"' text-anchor='middle' font-size='"+fsz(ls[0].length)+"' font-weight='700' style='fill:var(--td"+slot+")'>"+esc(ls[0])+"</text>";
+      else
+        t="<text x='"+(x+PW/2)+"' y='"+(yc-2)+"' text-anchor='middle' font-size='"+fsz(ls[0].length)+"' font-weight='700' style='fill:var(--td"+slot+")'>"+esc(ls[0])+"</text>"+
+          "<text x='"+(x+PW/2)+"' y='"+(yc+10)+"' text-anchor='middle' font-size='"+fsz(ls[1].length)+"' font-weight='700' style='fill:var(--td"+slot+")'>"+esc(ls[1])+"</text>";
+      return "<rect x='"+x+"' y='"+(yc-ph/2)+"' width='"+PW+"' height='"+ph+"' rx='13' style='fill:var(--t"+slot+");stroke:"+COLORS[slot]+"' stroke-width='1.5'/>"+t;
+    };
+    let defs="",lines="",lpills="",rpills="";
     let hits=0;
     [0,1,2,3].forEach(di=>{
       const a=catPerm[di];
       const hr=DIFF[a], cr=DIFF[di];
       if(hr===cr) hits++;
-      const cH=COLORS[a], cC=COLORS[di];
-      defs+="<linearGradient id='slg"+di+"' gradientUnits='userSpaceOnUse' x1='"+PX1+"' y1='"+Y(hr)+"' x2='"+PX2+"' y2='"+Y(cr)+"'>"+
-        "<stop offset='0' stop-color='"+cH+"'/><stop offset='1' stop-color='"+cC+"'/></linearGradient>";
-      lines+="<line x1='"+PX1+"' y1='"+Y(hr)+"' x2='"+PX2+"' y2='"+Y(cr)+"' stroke='url(#slg"+di+")' stroke-width='2' stroke-linecap='round'/>";
-      const ls=wrap2(cats[di].name);
-      const ph=ls.length>1?36:26;
-      let txt="";
-      if(ls.length===1)
-        txt="<text x='62' y='"+(Y(hr)+4)+"' text-anchor='middle' font-size='"+fsz(ls[0].length)+"' font-weight='700' style='fill:var(--td"+a+")'>"+esc(ls[0])+"</text>";
-      else
-        txt="<text x='62' y='"+(Y(hr)-2)+"' text-anchor='middle' font-size='"+fsz(ls[0].length)+"' font-weight='700' style='fill:var(--td"+a+")'>"+esc(ls[0])+"</text>"+
-            "<text x='62' y='"+(Y(hr)+10)+"' text-anchor='middle' font-size='"+fsz(ls[1].length)+"' font-weight='700' style='fill:var(--td"+a+")'>"+esc(ls[1])+"</text>";
-      lpills+="<rect x='4' y='"+(Y(hr)-ph/2)+"' width='116' height='"+ph+"' rx='13' style='fill:var(--t"+a+");stroke:"+cH+"' stroke-width='1.5'/>"+txt;
-      rdots+="<circle cx='"+PX2+"' cy='"+Y(cr)+"' r='6' fill='"+cC+"'/>";
+      defs+="<linearGradient id='slg"+di+"' gradientUnits='userSpaceOnUse' x1='"+(LX+PW)+"' y1='"+Y(hr)+"' x2='"+RX+"' y2='"+Y(cr)+"'>"+
+        "<stop offset='0' stop-color='"+COLORS[a]+"'/><stop offset='1' stop-color='"+COLORS[di]+"'/></linearGradient>";
+      lines+="<line x1='"+(LX+PW)+"' y1='"+Y(hr)+"' x2='"+RX+"' y2='"+Y(cr)+"' stroke='url(#slg"+di+")' stroke-width='2' stroke-linecap='round'/>";
+      lpills+=pill(LX,Y(hr),a,cats[di].name);
+      rpills+=pill(RX,Y(cr),di,cats[di].name);
     });
     const caption=hits===4?"Four straight lines — Hank called every rank."
       :hits===0?"Total overrule: the crowd disagreed on every rank."
       :"A line that changes colour = the crowd overruled Hank ("+hits+" of 4 held).";
     main="<div class='cs-slopehead'><span>Hank's call</span><span>The crowd</span></div>"+
-      "<svg viewBox='0 0 296 178' class='cs-slope' role='img' aria-label='Hank’s predicted difficulty (left) vs the crowd’s, easiest at the top'>"+
-      "<defs>"+defs+"</defs>"+lines+lpills+rdots+"</svg>"+
+      "<svg viewBox='0 0 380 178' class='cs-slope' role='img' aria-label='Hank’s predicted difficulty (left) vs the crowd’s (right), easiest at the top'>"+
+      "<defs>"+defs+"</defs>"+lines+lpills+rpills+"</svg>"+
       "<p class='cs-note' style='margin-top:8px'>"+caption+"</p>";
   } else {
     const rows=DIFF.map((di,r)=>
