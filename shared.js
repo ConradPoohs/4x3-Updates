@@ -232,7 +232,7 @@ function buildA11yMenu(){
     const data={};
     for(let i=0;i<localStorage.length;i++){
       const k=localStorage.key(i);
-      if(!/^(x43_|smush_|hg_)/.test(k)) continue;
+      if(!/^(x43_|smush_|hg_|4x6\.)/.test(k)) continue;   /* 4x6 stores under "4x6.v1" */
       if(k==="x43_dashkey"||k==="smush_edkey"||k==="x43_cards") continue;
       data[k]=localStorage.getItem(k);
     }
