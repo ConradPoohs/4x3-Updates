@@ -803,6 +803,24 @@ function startGame(){
   else { if(firstLoad&&G) introDeal(); else layout(true); renderMist(); updateButtons(); }
   firstLoad=false;
 }
+/* syllable-ish hyphenation point for long words: between doubled consonants,
+   at cluster boundaries (VC|CV), or before a lone consonant between vowels —
+   nearest the middle. Heuristic, not a dictionary; used by the board tiles
+   (as soft hyphens) and the stats sort card (as real line breaks). */
+function hyphAt(w,min){
+  if(w.length<=(min||11)||/[^a-zA-Z]/.test(w)) return 0;
+  const V=c=>/[aeiouyAEIOUY]/.test(c);
+  let best=0,bd=1e9;
+  for(let i=3;i<=w.length-3;i++){
+    const p=w[i-1],c=w[i];
+    let ok=false;
+    if(!V(p)&&p.toLowerCase()===c.toLowerCase()) ok=true;                 /* mis-spelled */
+    else if(!V(p)&&!V(c)&&V(w[i-2])&&V(w[i+1])) ok=true;                  /* trans-mission */
+    else if(V(p)&&!V(c)&&V(w[i+1])) ok=true;                              /* cos-metics */
+    if(ok){ const d=Math.abs(i-w.length/2); if(d<bd){ bd=d; best=i; } }
+  }
+  return best;
+}
 function buildTiles(){
   const b=document.getElementById("board");
   b.innerHTML=""; tiles={};
@@ -817,7 +835,12 @@ function buildTiles(){
     const inner=document.createElement("div");
     inner.className="tin";
     inner.style.animationDelay=(-Math.random()*16).toFixed(2)+"s"; /* desync the color drift */
-    inner.appendChild(document.createTextNode(w));
+    {  /* long words break at a syllable with a visible hyphen instead of
+          wherever the tile edge happens to fall (soft hyphen: invisible
+          unless the browser actually breaks there) */
+      const h=hyphAt(w,8);
+      inner.appendChild(document.createTextNode(h?w.slice(0,h)+"\u00AD"+w.slice(h):w));
+    }
     const lbl=document.createElement("span");   /* colour name shown only in "Labeled colors" mode */
     lbl.className="tlabel";
     inner.appendChild(lbl);
@@ -1487,6 +1510,66 @@ const DEFS={
     "Famous Inventors":{EDISON:"The light bulb and phonograph guy.",MORSE:"Dots, dashes, and the telegraph.",BELL:"Alexander Graham, of telephone fame."},
     "Things in Towers":{CLOCK:"The Elizabeth Tower contains Big Ben, the famous clock.",RAPUNZEL:"She let her hair down from a tower.",BELL:"Rung from the top of the church tower."},
     "Parts of Brass Instruments":{SLIDE:"The trombone's pitch-changer.",VALVE:"What the trumpet's buttons open.",BELL:"The flared opening where the sound comes out."}
+  },
+  NOTE:{
+    "A little writing":{MEMO:"A brief message for the office.",MESSAGE:"Any short communication passed along.",NOTE:"A quick jot for yourself or someone else."},
+    "Music Symbols":{CLEF:"Sets which lines mean which pitches.",REST:"The symbol for a beat of silence.",NOTE:"The symbol for a pitch and how long to hold it."},
+    "To Take Notice Of":{REGISTER:"For something to fully sink in.",MARK:"To mark someone's words is to heed them.",NOTE:"To observe and remember, as in duly noted."},
+    "Samsung Galaxy ___":{TAB:"Samsung's tablet line.",FOLD:"Samsung's phone that bends in half.",NOTE:"Samsung's big-screen phone with the S Pen."}
+  },
+  WORD:{
+    "Units of Language":{SYLLABLE:"A single beat of spoken sound.",PHRASE:"A small cluster of words that hang together.",WORD:"The basic standalone unit of meaning."},
+    "A Quick Conversation":{CHAT:"An informal little talk.",TALK:"A sit-down exchange.",WORD:"A brief exchange, as in \"can I have a quick one?\""},
+    "Slang for \"True!\"":{BET:"Modern slang for \"absolutely.\"",FACTS:"Emphatic agreement: no argument here.",WORD:"Classic slang for \"truth\" or \"agreed.\""},
+    "Microsoft Office Apps":{OUTLOOK:"The email and calendar one.",EXCEL:"The spreadsheet one.",WORD:"The document one."}
+  },
+  SLAM:{
+    "Things You Do to a Door":{OPEN:"Swing it wide.",SHUT:"Close it, politely.",SLAM:"Close it with a bang."},
+    "To Harshly Criticize":{BASH:"To attack verbally.",ROAST:"To mock, with or without affection.",SLAM:"To rip into, as headlines love to report."},
+    "Styles of Poetry":{EPIC:"A long heroic poem, like the Odyssey.",HAIKU:"Three lines, seventeen syllables.",SLAM:"Competitive spoken-word performance."},
+    "Grand ___":{PIANO:"The full-size concert instrument.",CANYON:"Arizona's very big crack.",SLAM:"Bases loaded home run in baseball."}
+  },
+  PARK:{
+    "Gear Shift Positions":{NEUTRAL:"No gear engaged, free to roll.",DRIVE:"The go-forward gear.",PARK:"The gear that locks the wheels in place."},
+    "Picnic Spots":{BEACH:"Where the ocean meets the land, as long as there's sand.",MEADOW:"A grassy field in the sun.",PARK:"The public green with benches and hopefully some shade."},
+    "Common Korean Surnames":{KIM:"The most common surname in Korea.",CHOI:"Another top-five Korean surname.",PARK:"The surname of K-pop stars and presidents alike."},
+    "Monopoly Property First Word":{MARVIN:"Marvin Gardens, in the yellow set.",BALTIC:"Baltic Avenue, the cheap purple one.",PARK:"Park Place, right next to Boardwalk."}
+  },
+  AUGUST:{
+    "Just...months":{MARCH:"The third one.",MAY:"The fifth one.",AUGUST:"The eighth one."},
+    "Dignified and Impressive":{STATELY:"Grand and imposing in manner.",VENERABLE:"Commanding respect through age and wisdom.",AUGUST:"Majestic, inspiring reverence."},
+    "Roman Leaders, Minus \"-US\"":{JULI:"Add the ending back for Julius Caesar.",BRUT:"Add it back for Brutus (et tu?).",AUGUST:"Add it back for Augustus, the first emperor."},
+    "Ends with a word for moving air.":{UNWIND:"Wind is the movement of air across the earth.",REGALE:"A gale is a very strong wind.",AUGUST:"A gust is a sudden rush of wind."}
+  },
+  CASTLE:{
+    "Grand Residences":{PALACE:"A royal residence built to impress.",MANOR:"The big house at the heart of an estate.",CASTLE:"A fortified home fit for royalty."},
+    "Chess Terms":{GAMBIT:"An opening that sacrifices a pawn for position.",PIN:"Trapping a piece in front of a more valuable one.",CASTLE:"The king-and-rook maneuver that tucks your king to safety."},
+    "One-Word TV Detectives":{MONK:"Tony Shalhoub's obsessive-compulsive sleuth.",BONES:"The forensic anthropologist who solves murders.",CASTLE:"The mystery novelist who tags along with the NYPD."},
+    "Studio Ghibli Title Words":{TOTORO:"My Neighbor ___, the giant forest spirit.",SPIRITED:"First word of ___ Away.",CASTLE:"Howl's Moving ___."}
+  },
+  TAIL:{
+    "The Butt":{RUMP:"The rear of an animal...but also sometimes of a person.",REAR:"A polite word for the butt.",TAIL:"\"He was working his tail off!\""},
+    "To Follow Someone":{SHADOW:"To trail someone closely and quietly.",DOG:"To follow persistently.",TAIL:"To covertly follow a suspect."},
+    "Parts of a Comet":{COMA:"The fuzzy glowing cloud around the core.",NUCLEUS:"The solid icy core.",TAIL:"The streak that always points away from the Sun."},
+    "Things You Wag":{TONGUE:"Wagging tongues spread gossip.",FINGER:"You wag a finger at someone who misbehaved.",TAIL:"The tail wags when the dog sees the cheese."}
+  },
+  SPIRIT:{
+    "Supernatural beings":{WRAITH:"A ghostly apparition of the dead.",BANSHEE:"Irish folklore's wailing omen.",SPIRIT:"A soul lingering past its body."},
+    "Enthusiasm and Energy":{PEP:"Bouncy, upbeat energy.",MOXIE:"Gutsy determination with attitude.",SPIRIT:"The fight in you, as in team pride."},
+    "Mars Rovers":{CURIOSITY:"The car-sized rover roaming Gale Crater since 2012.",OPPORTUNITY:"The little rover that ran 14 years past its 90-day alotted mission life.",SPIRIT:"Opportunity's twin, the first of the pair to land in 2004."},
+    "Budget Airlines":{FRONTIER:"The budget carrier with animals on its tails.",ALLEGIANT:"The Vegas-based budget option.",SPIRIT:"Bare-bones, bright-yellow and bankrupt."}
+  },
+  RAPID:{
+    "Speedy":{SWIFT:"Quick and nimble.",FLEET:"Fast and light on its feet.",RAPID:"Happening very, very fast."},
+    "River Features":{EDDY:"Water circling back on itself.",RIFFLE:"A shallow, rippling stretch.",RAPID:"The churning white-water stretch."},
+    "___-Fire":{CEASE:"A ceasefire stops the shooting.",CROSS:"Caught in a crossfire.",RAPID:"Rapid-fire: one right after another."},
+    "R.E.M.":{EYE:"REM sleep is phase of sleep.",MOVEMENT:"During REM sleep the eyes move rapidly back and forth.",RAPID:"REM sleep is when some of the deepest, most vivid dreaming occurs."}
+  },
+  BLOCK:{
+    "Units of a City":{NEIGHBORHOOD:"A named area of a city with its own character.",STREET:"A single road lined with addresses.",BLOCK:"The chunk of city bounded by four streets."},
+    "Dealing with a Troll":{MUTE:"You see nothing more from them; they never know.",REPORT:"Flag them to the moderators.",BLOCK:"The full goodbye: they can't see you, you can't see them."},
+    "Volleyball Actions":{SPIKE:"Slamming the ball down over the net.",SERVE:"The hit that starts every rally.",BLOCK:"Jumping at the net to wall off a spike."},
+    "Simple Toys":{MARBLE:"A little glass sphere for flicking and collecting.",TOP:"Give it a twist and watch it spin.",BLOCK:"The wooden cube every tower starts with."}
   }
 };
 /* post-game easter egg: tap the hub to press it in and burst out emojis */
@@ -2234,13 +2317,28 @@ function csPageSort(){
        gradient line runs flush edge-to-edge between them. */
     const wrap2=t=>{
       t=String(t); if(t.length<=14) return [t];
-      const w=t.split(" "); let best=[t,""], bd=1e9;
-      for(let i=1;i<w.length;i++){
-        const a=w.slice(0,i).join(" "), b=w.slice(i).join(" ");
+      /* long words become two tokens, first half wearing the hyphen */
+      const toks=t.split(" ").flatMap(w=>{
+        const h=hyphAt(w);
+        return h?[w.slice(0,h)+"-",w.slice(h)]:[w];
+      });
+      /* join rule: a "-" token glues to its partner with no space; if both
+         halves land on one line the hyphen dissolves back into the word */
+      const join=a=>{
+        let out="";
+        a.forEach((w,i)=>{
+          if(!out){ out=w; return; }
+          out = out.endsWith("-") ? out.slice(0,-1)+(a[i-1].endsWith("-")?"":" ")+w : out+" "+w;
+        });
+        return out;
+      };
+      let best=[join(toks),""], bd=1e9;
+      for(let i=1;i<toks.length;i++){
+        const a=join(toks.slice(0,i)), b=join(toks.slice(i));   /* join keeps a break-hyphen naturally */
         const d=Math.abs(a.length-b.length)+Math.max(a.length,b.length,14)*2;
         if(d<bd){ bd=d; best=[a,b]; }
       }
-      return best[1]?best:[t];
+      return best[1]?best:[join(toks)];
     };
     const fsz=l=>Math.min(10.5, l<=15?10.5:10.5*15/l);
     const STEP=42, Y=r=>26+r*STEP;
