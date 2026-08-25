@@ -210,7 +210,7 @@
       <div id="boardWrap" style="display:none">
         <div id="board"></div>
         <div class="ctrls">
-          <button id="callItBtn" onclick="callIt()" style="display:none">Call It 👑</button>
+          <button id="callItBtn" onclick="callIt()" style="display:none" disabled title="Click the word you think is the hub and you can call it.">Call It</button>
           <button id="shuffleBtn" onclick="shuffleBoard()">Shuffle</button>
           <button id="deselBtn" onclick="deselectAll()">Deselect</button>
           <button class="primary" id="submitBtn" onclick="submitGuess()" disabled>Submit</button>
@@ -293,6 +293,20 @@
   <div class="mcard" role="dialog" aria-modal="true" aria-label="Results">
     <button class="mclose" onclick="closeModal()" aria-label="Close">×</button>
     <div id="mbody" class="result"></div>
+  </div>
+</div>
+<div id="callModal">
+  <div class="mback" onclick="closeCallModal()"></div>
+  <div class="mcard" role="dialog" aria-modal="true" aria-label="Call the hub" style="max-width:320px;text-align:center">
+    <button class="mclose" onclick="closeCallModal()" aria-label="Close">×</button>
+    <div style="font-size:20px;font-weight:800;margin:4px 0 10px">Call it?</div>
+    <div style="font-size:15px;line-height:1.5;color:var(--mut)">You're calling
+      <b id="callWord" style="color:var(--ink)"></b> as the hub.<br>
+      You get <b style="color:var(--ink)">one chance</b> — if you're wrong, you fail the entire board.</div>
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:18px">
+      <button id="callNo" onclick="closeCallModal()" style="padding:10px 18px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--ink);font-weight:700;cursor:pointer">Never mind</button>
+      <button onclick="confirmCall()" style="padding:10px 18px;border-radius:12px;border:2px solid #d4a017;background:#d4a017;color:#fff;font-weight:800;cursor:pointer">Call it</button>
+    </div>
   </div>
 </div>
 <button class="qmark" onclick="openScoring()" aria-label="How scoring works" title="How scoring works">?</button>
@@ -378,35 +392,57 @@ let cats=[], special="", slots=[], slots0=[], tiles={};
 let selection=[], solvedIdx=[], colorCat={}, locked=new Set();
 let mistakes=0, penalty=0, guesses=[], over=false, animating=false, oaCount=0, wrongTrios=[];
 /* Call It (EXPERIMENT — localStorage x43_callit="1"): before your first
-   guess, stake the whole board on naming the hub. Right = the hub-first
-   perfect track is locked (the board can no longer be lost — victory lap).
-   Wrong = the board is failed on the spot. One use, then the button's gone. */
-let callArmed=false, hubCalled=null, calledRight=false;
+   guess, stake the whole board on naming the hub. Select ONE word, then the
+   button lights up; confirming happens in a 4×3-style dialog, not a browser
+   confirm. Right = the hub-first perfect track is locked (the board can no
+   longer be lost — victory lap). Wrong = the board is failed on the spot.
+   One use, then the button's gone. */
+let hubCalled=null, calledRight=false;
 function callItEnabled(){ try{ return localStorage.getItem("x43_callit")==="1"; }catch(e){ return false; } }
 function refreshCallBtn(){
   const b=document.getElementById("callItBtn"); if(!b) return;
-  b.style.display=(callItEnabled()&&!over&&!isBeta&&!communityId&&!isPreview&&guesses.length===0&&hubCalled===null)?"":"none";
+  const show=callItEnabled()&&!over&&!isBeta&&!communityId&&!isPreview&&guesses.length===0&&hubCalled===null;
+  b.style.display=show?"":"none";
+  if(show) b.disabled=selection.length!==1;   /* greyed until exactly one word is picked */
 }
 function callIt(){
-  if(over||guesses.length>0||hubCalled!==null) return;
-  if(!confirm("If you get it wrong, you fail the entire board. Still want to do it?")) return;
-  callArmed=true;
-  document.getElementById("callItBtn").style.display="none";   /* gone the moment it's used */
-  toast("Tap the word you think is the hub. 👑",3200);
+  if(over||guesses.length>0||hubCalled!==null||selection.length!==1) return;
+  document.getElementById("callWord").textContent=selection[0];
+  const m=document.getElementById("callModal");
+  m.style.display="flex";
+  if(G){
+    G.fromTo(m.querySelector(".mback"),{opacity:0},{opacity:1,duration:.3});
+    G.fromTo(m.querySelector(".mcard"),{scale:.92,opacity:0,y:26},{scale:1,opacity:1,y:0,duration:.5,ease:"back.out(1.6)"});
+  }
+  const nm=document.getElementById("callNo"); if(nm) nm.focus();   /* default focus on the safe way out */
+}
+function closeCallModal(){
+  const m=document.getElementById("callModal");
+  if(G){
+    G.to(m.querySelector(".mcard"),{scale:.93,opacity:0,y:14,duration:.22,ease:"power2.in"});
+    G.to(m.querySelector(".mback"),{opacity:0,duration:.25,onComplete:()=>{m.style.display="none";}});
+  } else m.style.display="none";
+}
+function confirmCall(){
+  const w=selection[0];
+  closeCallModal();
+  if(over||guesses.length>0||hubCalled!==null||!w) return;
+  resolveCall(w);
 }
 function resolveCall(w){
-  callArmed=false; hubCalled=w;
+  hubCalled=w;
+  selection=[];   /* the stake is placed, not selected */
   if(w===special){
     calledRight=true;
-    const t=tiles[w]; if(t){ t.querySelector(".tin").classList.add("called"); }
-    toast("👑 CALLED IT. The board is yours — finish it in style.",3600);
+    paintTiles(); updateButtons();
+    toast("CALLED IT. The board is yours — finish it in style.",3600);
+    saveGame();
   } else {
-    toast("You called "+w+".",2200);
+    paintTiles(); updateButtons();
+    toast("You called "+w+". It wasn't.",2400);
     saveGame();
     endGame(false);
-    return;
   }
-  saveGame();
 }
 let clicks=0;   /* tile taps that changed the selection (selects + deselects) */
 let debugStreak=0; /* streak-preview override (set from the test menu) — never persisted */
@@ -739,7 +775,7 @@ function restoreGame(st){
   clicks=st.ck||0;   /* 0 on pre-feature saves → click awards simply don't fire */
   oaCount=st.oa||0;
   wrongTrios=Array.isArray(st.wt)?st.wt:[];
-  hubCalled=st.hc||null; calledRight=!!st.hcr; callArmed=false;
+  hubCalled=st.hc||null; calledRight=!!st.hcr;
   if(calledRight&&tiles[special]) tiles[special].querySelector(".tin").classList.add("called");
   if(st.over){
     over=true;
@@ -804,7 +840,7 @@ function startGame(){
   hubFx.forEach(tw=>tw.kill()); hubFx=[];
   selection=[]; solvedIdx=[]; colorCat={}; locked=new Set();
   mistakes=0; penalty=0; guesses=[]; over=false; animating=false; adClicked=false; adClickedId=""; oaCount=0; wrongTrios=[];
-  clicks=0; debugStreak=0; callArmed=false; hubCalled=null; calledRight=false;
+  clicks=0; debugStreak=0; hubCalled=null; calledRight=false;
   startTime=0; solveMs=null;   /* 0 = clock not started; first tap starts it */
   fb={diff:0,fun:0,special:"",r:[0,0,0,0]};
   document.getElementById("boardWrap").style.display="";
@@ -1073,6 +1109,7 @@ function paintTiles(){
   for(const w of Object.keys(tiles)){
     const t=tiles[w], inner=t.querySelector(".tin");
     const sel=selection.includes(w);
+    inner.classList.toggle("called",calledRight&&w===hubCalled);   /* survives a mid-lap refresh */
     t.classList.toggle("sel",sel);
     t.classList.toggle("lock",locked.has(w));
     /* a11y state: announce selection, drop solved/finished tiles out of the tab order */
@@ -1748,7 +1785,6 @@ function flushPendingTap(){
   for(const p of q){ if(!over&&!animating&&!locked.has(p)&&tiles[p]) tapWord(p); }
 }
 function tapWord(w){
-  if(callArmed&&!over){ resolveCall(w); return; }   /* the staked tap */
   if(over){ if(w===special){ hubPop(); hubSmashed(); } return; }   /* finished board: hub is an emoji button */
   if(animating&&!locked.has(w)){ if(pendingTap.length<3) pendingTap.push(w); return; }   /* taps mid-animation queue IN ORDER */
   if(animating||locked.has(w)) return;
@@ -2026,7 +2062,11 @@ function isRainbow(){ return orderIs(RAINBOW); }     /* yellow → green → blu
 function isGrellow(){ return orderIs(GRELLOW); }   /* purple → blue → yellow → green */
 function isGrue(){ return orderIs(GRUE); }          /* purple → green → blue → yellow */
 function calcScore(){
-  const won=mistakes<MAXM;
+  /* a failed hub call is a LOSS even though mistakes never moved — without
+     this, every consumer downstream (card, headline, streak, badges) renders
+     the fail as a zero-guess "win". One source of truth, right here. */
+  const callFail=hubCalled!==null&&!calledRight;
+  const won=mistakes<MAXM&&!callFail;
   const perfect=won&&mistakes===0;
   const hubFirst=won&&(calledRight||hubFirstAll());
   const hubMiddle=won&&hubMiddleAll();
@@ -2073,7 +2113,7 @@ function calcScore(){
   const prevAvg=past.length?past.reduce((a,b)=>a+b,0)/past.length:null;
   const topScore=won&&prevBest!==null&&score>prevBest;                 /* a new all-time high */
   const beatAvg=won&&prevAvg!==null&&score>prevAvg&&!topScore;          /* above your average (top score already implies it) */
-  return {won, perfect, hubFirst, hubMiddle, ruleBreaker, purpleFirst, blueFirst, pathfinder, rrHank, rrCrowd, cleanSprint, foolsRush, buzzer, closeCall, frictionless, century, revRainbow, rainbow, grellow, grue, godDamnit, dayBefore, fast, minClicks, megaClicks, smusher, human, bsmash, allRewards, goldPlaque, silverPlaque, perfectBonus, streak, streakMile, topScore, beatAvg, score};
+  return {won, callFail, perfect, hubFirst, hubMiddle, ruleBreaker, purpleFirst, blueFirst, pathfinder, rrHank, rrCrowd, cleanSprint, foolsRush, buzzer, closeCall, frictionless, century, revRainbow, rainbow, grellow, grue, godDamnit, dayBefore, fast, minClicks, megaClicks, smusher, human, bsmash, allRewards, goldPlaque, silverPlaque, perfectBonus, streak, streakMile, topScore, beatAvg, score};
 }
 
 /* ---------- end ---------- */
@@ -2765,6 +2805,7 @@ document.addEventListener("keydown",e=>{
   if(e.key!=="Escape") return;
   if(document.getElementById("shareModal").style.display==="flex") closeShareScreen();
   if(document.getElementById("fbkModal").style.display==="flex") closeFbk();
+  if(document.getElementById("callModal").style.display==="flex") closeCallModal();
 });
 function showPostHub(){
   if(!over||isBeta||communityId) return;
@@ -2992,7 +3033,7 @@ function drawMileRibbon(x,W,y,n,FONT){
   x.restore();
 }
 function drawShareCard(){
-  const {won,hubFirst,hubMiddle,ruleBreaker,purpleFirst,revRainbow,rainbow,godDamnit,rrHank,rrCrowd,fast,allRewards,goldPlaque,silverPlaque,streakMile,score}=calcScore();
+  const {won,callFail,hubFirst,hubMiddle,ruleBreaker,purpleFirst,revRainbow,rainbow,godDamnit,rrHank,rrCrowd,fast,allRewards,goldPlaque,silverPlaque,streakMile,score}=calcScore();
   const perfect=won&&mistakes===0;
   const plain=!(revRainbow||purpleFirst||hubFirst||hubMiddle||perfect);
   const S=2, M=14, W=420, R=26;
@@ -3003,7 +3044,7 @@ function drawShareCard(){
   const mileH=(streakMile&&plaque)?42:0;             /* plaques keep the small ribbon instead */
   const BAND=76;                                     /* masthead height on the milestone card */
   const headH=mileBig?BAND+66:((allRewards||godDamnit||rainbow||rrPlaque)?156:(ruleBreaker?150:130))+mileH, rows=guesses.length, footH=84;
-  const H=headH+rows*(cell+gap)-gap+footH;
+  const H=callFail?272:headH+(rows?rows*(cell+gap)-gap:0)+footH;   /* call-fail: fixed-height card, no guess grid (rows may be 0) */
   const cv=document.createElement("canvas");
   cv.width=(W+2*M)*S; cv.height=(H+2*M)*S;
   const x=cv.getContext("2d"); x.scale(S,S); x.translate(M,M);
@@ -3012,6 +3053,42 @@ function drawShareCard(){
      ships transparent pixels — otherwise the viewing app's background bleeds
      into the corners/margin as a stray white or black border */
   x.fillStyle="#faf7f1"; x.fillRect(-M,-M,W+2*M,H+2*M);
+  if(callFail){
+    /* ---- THE WRONG CROWN: red plaque for staking the board and missing.
+       No guess grid — there may not have been a single guess. ---- */
+    const P={g0:"#f0a79c",g1:"#d65f50",g2:"#b83b2c",g3:"#86251b",hi:"rgba(255,236,230,.7)",grv:"rgba(86,18,10,.5)",
+      eL:"rgba(255,238,232,.5)",eD:"rgba(70,14,8,.5)",eF:"#7a2418"};
+    x.save(); rr(x,0,0,W,H,R); x.clip();
+    const mg=x.createLinearGradient(0,0,W*0.5,H);
+    mg.addColorStop(0,P.g0); mg.addColorStop(.42,P.g1); mg.addColorStop(.58,P.g2); mg.addColorStop(1,P.g3);
+    x.fillStyle=mg; x.fillRect(0,0,W,H);
+    shineStreak(x,W,H,0.30,0.32,0.09); shineStreak(x,W,H,0.72,0.16,0.05);
+    x.restore();
+    rr(x,3.5,3.5,W-7,H-7,R-3.5); x.strokeStyle=P.hi; x.lineWidth=2.5; x.stroke();
+    rr(x,7,7,W-14,H-14,R-7); x.strokeStyle=P.grv; x.lineWidth=1.5; x.stroke();
+    const eng=(t,ex,ey,font)=>{ x.textAlign="center"; x.font=font;
+      x.fillStyle=P.eL; x.fillText(t,ex+0.8,ey+1);
+      x.fillStyle=P.eD; x.fillText(t,ex-0.8,ey-1);
+      x.fillStyle=P.eF; x.fillText(t,ex,ey); };
+    if(LOGO.complete&&LOGO.naturalWidth){ const lh=52, lw=lh*LOGO.naturalWidth/LOGO.naturalHeight; x.drawImage(LOGO,(W-lw)/2,13,lw,lh); }
+    else eng("4 × 3",W/2,54,"800 34px "+FONT);
+    const subd=dailyKey?fmtDate(dailyKey):"";
+    if(subd) eng(subd,W/2,86,"600 13px "+FONT);
+    eng("0 pts · Called the hub",W/2,108,"700 16px "+FONT);
+    eng("Bold. Wrong, but bold.",W/2,142,"800 23px "+FONT);
+    /* the crown, engraved and knocked sideways off its head */
+    const drawCrown=(cx2,cy2)=>{ x.beginPath();
+      x.moveTo(cx2-32,cy2+15); x.lineTo(cx2-32,cy2-6); x.lineTo(cx2-16,cy2+3); x.lineTo(cx2,cy2-16);
+      x.lineTo(cx2+16,cy2+3); x.lineTo(cx2+32,cy2-6); x.lineTo(cx2+32,cy2+15); x.closePath(); x.fill(); };
+    x.save(); x.translate(W/2,188); x.rotate(0.35);
+    x.fillStyle=P.eL; drawCrown(0.8,1);
+    x.fillStyle=P.eD; drawCrown(-0.8,-1);
+    x.fillStyle=P.eF; drawCrown(0,0);
+    x.restore();
+    eng("staked the whole board on one word",W/2,H-44,"12px "+FONT);
+    eng("hankgreen.com/fourbythree",W/2,H-24,"600 11px "+FONT);
+    return cv;
+  }
   if(ruleBreaker){
     /* ---- RULE BREAKER: the board crumbles — dusty, cracked, colour drained ---- */
     x.save(); rr(x,0,0,W,H,R); x.clip();
@@ -3531,9 +3608,10 @@ function resultEmojiRows(){
   return guesses.map(g=>g.map(w=>w===special?"🌟":EMOJI[cats.findIndex(c=>c.words.includes(w))]||"⬜").join("")).join("\n");
 }
 function resultDescription(){
-  const {won,score,ruleBreaker}=calcScore();
+  const {won,score,ruleBreaker,callFail}=calcScore();
   const head=dailyKey?fmtDate(dailyKey)+"\n":"";
   const tail="\nhttps://4x3.fun";   /* link at the bottom — full scheme so every app linkifies it */
+  if(callFail) return head+"0 points • Called the hub. Missed. 👑\nBold. Wrong, but bold."+tail;
   if(ruleBreaker) return head+score+" points • RULE BREAKER 💀\n"+resultEmojiRows()+tail;
   return head+(won?score+" points":"Out of guesses")+" • "+(mistakes?mistakes+" mistake"+(mistakes===1?"":"s"):"No mistakes")+"\n"+resultEmojiRows()+tail;
 }
