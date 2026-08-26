@@ -164,7 +164,7 @@
   .scat span{font-size:13.5px; color:var(--ink); letter-spacing:.3px; white-space:nowrap;}
   .scat .hub{color:#b8860b; font-weight:700;}
   /* result modal */
-  #modal, #humansModal, #scoreModal, #callModal{position:fixed; inset:0; z-index:100; display:none; align-items:center; justify-content:center;}
+  #modal, #humansModal, #scoreModal, #callModal, #callIntro{position:fixed; inset:0; z-index:100; display:none; align-items:center; justify-content:center;}
   /* end-of-game mode: the results take the WHOLE screen (NYT-style) on every
      device; content sits in a centered ~430px column inside the sheet */
   #modal.endmode{align-items:stretch;}
