@@ -115,8 +115,12 @@
   .tback{position:absolute; inset:0; border-radius:10px; border:1.5px solid var(--line);
     background:#b0cfd4 url("lightfish2.jpg") center/cover no-repeat;
     transform:rotateY(180deg); backface-visibility:hidden; -webkit-backface-visibility:hidden;}
-  /* Call It experiment: the correctly-called hub wears a quiet crown ring */
-  .tin.called{box-shadow:inset 0 0 0 2.5px #d4a017;}
+  /* Call It experiment: the correctly-called hub wears a rainbow ring
+     (yellow → green → blue → purple, the game's four colours) */
+  .tin.called::after{content:""; position:absolute; inset:-1.5px; border-radius:10px; padding:3px;
+    background:conic-gradient(#e7b416,#56b870,#5b8def,#a06ee1,#e7b416);
+    -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor; mask-composite:exclude; pointer-events:none;}
   #callItBtn{border-color:#d4a017; color:#8a6d12;}
   #callItBtn:disabled{border-color:var(--line); color:var(--mut); opacity:.55; cursor:default;}
   html.thm-dark #callItBtn{color:#f0c94f;}

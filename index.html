@@ -398,6 +398,16 @@ let mistakes=0, penalty=0, guesses=[], over=false, animating=false, oaCount=0, w
    longer be lost — victory lap). Wrong = the board is failed on the spot.
    One use, then the button's gone. */
 let hubCalled=null, calledRight=false;
+function callFailed(){ return hubCalled!==null&&!calledRight; }
+/* a failed call hides the board: every card flips face-down, no reveal */
+function flipBoardDown(instant){
+  Object.keys(tiles).forEach((w)=>{
+    const fl=tiles[w]&&tiles[w].querySelector(".tflip"); if(!fl) return;
+    const i=slots.indexOf(w), d=i>=0?((i%3)+Math.floor(i/3))*0.08:0;
+    if(G&&!instant&&!reduceMotion()) G.to(fl,{rotationY:180,duration:.6,delay:d,ease:"power2.inOut"});
+    else fl.style.transform="rotateY(180deg)";
+  });
+}
 function callItEnabled(){ try{ return localStorage.getItem("x43_callit")==="1"; }catch(e){ return false; } }
 function refreshCallBtn(){
   const b=document.getElementById("callItBtn"); if(!b) return;
@@ -434,8 +444,10 @@ function resolveCall(w){
   selection=[];   /* the stake is placed, not selected */
   if(w===special){
     calledRight=true;
+    reflowSlots(); syncDomOrder();   /* the hub has earned the center */
     paintTiles(); updateButtons();
-    toast("CALLED IT. The board is yours — finish it in style.",3600);
+    layout(false);
+    toast("Called it! Can you get the whole board?",3600);
     saveGame();
   } else {
     paintTiles(); updateButtons();
@@ -518,7 +530,7 @@ let introPlaying=false; /* true while the first-load intro is animating (don't r
 
 /* hub = the special word. It stays hidden until it's logically
    determined (two solved groups share exactly one word) or the game ends. */
-function hubKnown(){ return solvedIdx.length>=2||over; }
+function hubKnown(){ return solvedIdx.length>=2||calledRight||(over&&!callFailed()); }
 
 /* ---------- nav ---------- */
 /* the game is the only view on this page now; scoring / archive / build moved
@@ -792,7 +804,8 @@ function restoreGame(st){
   if(over){
     document.getElementById("deselBtn").style.display="none";
     document.getElementById("shuffleBtn").style.display="none";
-    const won=mistakes<MAXM;
+    const won=calcScore().won;   /* calcScore knows about failed calls; a bare mistakes check doesn't */
+    if(callFailed()) flipBoardDown(true);   /* restored hidden board stays hidden */
     showResult(won,calcScore().score,false,true); /* quiet: no auto-popped modal */
     if(won&&G) endFlourish();
   } else if(guesses.length||solvedIdx.length||mistakes){
@@ -1016,8 +1029,9 @@ window.addEventListener("resize",()=>{ introPlaying=false; layout(true); });  /*
    cell, center only ~1/3 of the time). From the second solve on: hub → center,
    each solved pair → its category's line through it. */
 function reflowSlots(){
+  if(over&&callFailed()) return;   /* failed call: nothing moves, nothing is revealed */
   const target=new Array(9).fill(null);
-  if(solvedIdx.length===1&&!over){
+  if(solvedIdx.length===1&&!over&&!calledRight){   /* a called hub never leaves the center */
     /* first solve snaps to THIS category's colored line so the directional cue
        shows immediately; the hub takes a stable 1-of-3 spot on the line (center
        only ~1/3 of the time) so it isn't always given away as the middle card */
@@ -1027,7 +1041,7 @@ function reflowSlots(){
     const hp=hubSlotPos(special+"|"+ci);
     let wi=0;
     cells.forEach((cell,idx)=>{ target[cell]=(idx===hp)?special:words[wi++]; });
-  } else if(solvedIdx.length>=2||over){
+  } else if(solvedIdx.length>=2||over||calledRight){
     target[CENTER]=special;
     solvedIdx.forEach((ci)=>{
       target[LINES[ci][0]]=cats[ci].words[0];
@@ -1117,7 +1131,7 @@ function paintTiles(){
     const inert=locked.has(w)||over;
     t.tabIndex=inert?-1:0;
     if(inert) t.setAttribute("aria-disabled","true"); else t.removeAttribute("aria-disabled");
-    const hubPlaced=(w===special&&(solvedIdx.length>=2||over)); /* hub sits in the center now */
+    const hubPlaced=(w===special&&(solvedIdx.length>=2||calledRight||(over&&!callFailed()))); /* hub sits in the center now */
     const ci=colorCat[w];
     const lbl=inner.querySelector(".tlabel");   /* colour name (shown only in Labeled colors mode) */
     if(lbl) lbl.textContent=(ci!==undefined&&!hubPlaced)?COLOR_NAMES[ci]:"";
@@ -1785,7 +1799,7 @@ function flushPendingTap(){
   for(const p of q){ if(!over&&!animating&&!locked.has(p)&&tiles[p]) tapWord(p); }
 }
 function tapWord(w){
-  if(over){ if(w===special){ hubPop(); hubSmashed(); } return; }   /* finished board: hub is an emoji button */
+  if(over){ if(w===special&&!callFailed()){ hubPop(); hubSmashed(); } return; }   /* finished board: hub is an emoji button (not on a hidden board) */
   if(animating&&!locked.has(w)){ if(pendingTap.length<3) pendingTap.push(w); return; }   /* taps mid-animation queue IN ORDER */
   if(animating||locked.has(w)) return;
   const i=selection.indexOf(w);
@@ -1811,7 +1825,7 @@ function deselectAll(){ if(animating) return; selection=[]; paintTiles(); update
    Solved/coloured groups and the centred hub stay put. */
 function shuffleBoard(){
   if(over||animating||shuffling) return;
-  const hubPlaced=solvedIdx.length>=2||over;
+  const hubPlaced=solvedIdx.length>=2||over||calledRight;
   const idxs=[], words=[];
   slots.forEach((w,i)=>{
     if(!w) return;
@@ -1864,8 +1878,9 @@ function solveAnim(ci,sel){
   const after=()=>{
     solvedIdx.push(ci);
     if(solvedIdx.length===1){
-      /* first solve: trio → top row, all the same color, hub not singled out */
-      for(const w of [special,...cats[ci].words]) colorCat[w]=ci;
+      /* first solve: trio → top row, all the same color, hub not singled out —
+         unless it was CALLED, in which case it already has its own look */
+      for(const w of (calledRight?cats[ci].words:[special,...cats[ci].words])) colorCat[w]=ci;
     } else {
       for(const w of cats[ci].words){ colorCat[w]=ci; locked.add(w); }
       if(solvedIdx.length===2){
@@ -2137,17 +2152,25 @@ function shineHub(){
 function endGame(won){
   over=true;
   if(solveMs===null) solveMs=startTime?Date.now()-startTime:0;
-  if(!won){
+  const cf=callFailed();
+  if(!won&&!cf){
     cats.forEach((c,i)=>{ if(!solvedIdx.includes(i)){ solvedIdx.push(i); for(const w of c.words){colorCat[w]=i;} } });
   }
   for(const ci of solvedIdx) for(const w of cats[ci].words) locked.add(w);
   locked.add(special);
   delete colorCat[special];
-  reflowSlots();
-  syncDomOrder();   /* reorder before recolour so end-of-game fades survive */
-  renderSolvedList();
-  paintTiles();
-  layout(false);
+  if(cf){
+    /* failed call: no reveal AT ALL — every card flips face-down where it sits */
+    for(const w of Object.keys(tiles)) locked.add(w);
+    paintTiles();
+    flipBoardDown(false);
+  } else {
+    reflowSlots();
+    syncDomOrder();   /* reorder before recolour so end-of-game fades survive */
+    renderSolvedList();
+    paintTiles();
+    layout(false);
+  }
   renderMist();
   saveGame();
   const score=calcScore().score;
@@ -2227,7 +2250,7 @@ function tallyItems(cs){
   if(cs.ruleBreaker){ it.push(["💀","Rule Breaker — shared word went last every guess",cs.score]); return it; }
   it.push(["✅","Completed!",100]);   /* base for a solve — lands first and runs the total up to 100 */
   if(penalty>0) it.push(["💔",mistakes+" mistake"+(mistakes===1?"":"s"),-penalty]);
-  if(cs.hubFirst) it.push(["🔝","Hub First",HUB_BONUS]);
+  if(cs.hubFirst) it.push(calledRight?["🎯","Called It",HUB_BONUS]:["🔝","Hub First",HUB_BONUS]);
   if(cs.hubMiddle) it.push(["↔️","Hub Middle",HUB_MID_BONUS]);
   if(cs.blueFirst) it.push(["🔵","Blue First",BLUE_BONUS]);
   if(cs.purpleFirst) it.push(["🟣","Purple First",PURPLE_BONUS]);
@@ -2356,7 +2379,9 @@ function showResult(won,score,fancy,quiet){
     (mile?"<div class='mstreak"+(mile>=25?"":" sv")+"'>STREAK OF "+mile+"<span>"+mile+" days in a row. Incredible.</span></div>":"")+
     (won
       ? "<div class='tally-count' id='tallyCount'>"+(quiet?score:0)+"</div><div class='tally-list' id='tallyList'></div>"
-      : "<h2>Out of guesses 😵</h2><div class='score'>"+(mistakes?mistakes+" mistake"+(mistakes===1?"":"s"):"No mistakes")+"</div>")+
+      : callFailed()
+        ? "<h2>Failed Hub Call</h2><div class='score'>You said the hub was "+esc(hubCalled)+". It was "+esc(special)+".</div>"
+        : "<h2>Out of guesses 😵</h2><div class='score'>"+(mistakes?mistakes+" mistake"+(mistakes===1?"":"s"):"No mistakes")+"</div>")+
     "<div class='rowbtns'>"+
       "<button class='hbtn primary' onclick='openShareScreen()'>Share</button>"+
       (pendingKey?"<button class='hbtn' onclick='closeModal();init()'>Play today's puzzle</button>":"")+
@@ -3044,11 +3069,40 @@ function drawShareCard(){
   const mileH=(streakMile&&plaque)?42:0;             /* plaques keep the small ribbon instead */
   const BAND=76;                                     /* masthead height on the milestone card */
   const headH=mileBig?BAND+66:((allRewards||godDamnit||rainbow||rrPlaque)?156:(ruleBreaker?150:130))+mileH, rows=guesses.length, footH=84;
-  const H=callFail?272:headH+(rows?rows*(cell+gap)-gap:0)+footH;   /* call-fail: fixed-height card, no guess grid (rows may be 0) */
+  const H=callFail?212:headH+(rows?rows*(cell+gap)-gap:0)+footH;   /* call-fail: fixed-height card, no guess grid (rows may be 0) */
   const cv=document.createElement("canvas");
   cv.width=(W+2*M)*S; cv.height=(H+2*M)*S;
   const x=cv.getContext("2d"); x.scale(S,S); x.translate(M,M);
   const FONT="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+  /* CALLED IT: a gold corner ribbon drawn LAST, over whatever card style won —
+     plaques, streak banners, rainbow, all of them. fin() replaces bare returns. */
+  const fin=()=>{
+    if(!(won&&calledRight)) return cv;
+    x.save();
+    rr(x,0,0,W,H,R); x.clip();
+    x.translate(W-58,58); x.rotate(Math.PI/4);
+    x.shadowColor="rgba(40,30,5,.35)"; x.shadowBlur=7; x.shadowOffsetY=2;
+    const rg=x.createLinearGradient(0,-15,0,15);
+    rg.addColorStop(0,"#f7df93"); rg.addColorStop(.5,"#dcb442"); rg.addColorStop(1,"#c89f24");
+    x.fillStyle=rg; x.fillRect(-110,-15,220,30);
+    x.shadowColor="transparent";
+    x.fillStyle="rgba(86,58,8,.55)"; x.fillRect(-110,-15,220,1.5); x.fillRect(-110,13.5,220,1.5);
+    x.textAlign="center"; x.textBaseline="middle"; x.font="800 13px "+FONT;
+    x.fillStyle="rgba(255,249,214,.6)"; x.fillText("C A L L E D  I T",0,1.5);
+    x.fillStyle="#5a4404"; x.fillText("C A L L E D  I T",0,0);
+    x.textBaseline="alphabetic";
+    x.restore();
+    return cv;
+  };
+  /* the called hub's grid ring is rainbow wherever the gold ring would appear */
+  const hubRing=(px,py)=>{
+    if(calledRight&&x.createConicGradient){
+      const g=x.createConicGradient(-Math.PI/2,px+cell/2,py+cell/2);
+      g.addColorStop(0,"#e7b416"); g.addColorStop(.25,"#56b870"); g.addColorStop(.5,"#5b8def"); g.addColorStop(.75,"#a06ee1"); g.addColorStop(1,"#e7b416");
+      return g;
+    }
+    return GOLD;
+  };
   /* opaque backdrop across the whole canvas (incl. margins) so the PNG never
      ships transparent pixels — otherwise the viewing app's background bleeds
      into the corners/margin as a stray white or black border */
@@ -3074,17 +3128,8 @@ function drawShareCard(){
     else eng("4 × 3",W/2,54,"800 34px "+FONT);
     const subd=dailyKey?fmtDate(dailyKey):"";
     if(subd) eng(subd,W/2,86,"600 13px "+FONT);
-    eng("0 pts · Called the hub",W/2,108,"700 16px "+FONT);
+    eng("0 pts · Called the Wrong Hub",W/2,108,"700 16px "+FONT);
     eng("Bold. Wrong, but bold.",W/2,142,"800 23px "+FONT);
-    /* the crown, engraved and knocked sideways off its head */
-    const drawCrown=(cx2,cy2)=>{ x.beginPath();
-      x.moveTo(cx2-32,cy2+15); x.lineTo(cx2-32,cy2-6); x.lineTo(cx2-16,cy2+3); x.lineTo(cx2,cy2-16);
-      x.lineTo(cx2+16,cy2+3); x.lineTo(cx2+32,cy2-6); x.lineTo(cx2+32,cy2+15); x.closePath(); x.fill(); };
-    x.save(); x.translate(W/2,188); x.rotate(0.35);
-    x.fillStyle=P.eL; drawCrown(0.8,1);
-    x.fillStyle=P.eD; drawCrown(-0.8,-1);
-    x.fillStyle=P.eF; drawCrown(0,0);
-    x.restore();
     eng("staked the whole board on one word",W/2,H-44,"12px "+FONT);
     eng("hankgreen.com/fourbythree",W/2,H-24,"600 11px "+FONT);
     return cv;
@@ -3144,7 +3189,7 @@ function drawShareCard(){
     x.fillStyle="#6b6253"; x.font="700 14px "+FONT; x.fillText(score+" pts · Hub Last",W/2,130);
     x.fillStyle="#9a9080"; x.font="12px "+FONT; x.fillText("the shared word is meant to lead, not trail",W/2,H-44);
     x.fillStyle="#8a8174"; x.font="600 11px "+FONT; x.fillText("hankgreen.com/fourbythree",W/2,H-24);
-    return cv;
+    return fin();
   }
   if(plaque){
     /* ---- metal plaque: engraved gold / silver / red. Reverse Rainbow
@@ -3216,7 +3261,7 @@ function drawShareCard(){
     }
     eng("four categories · three words · one shared", W/2, H-44, "12px "+FONT);
     eng("hankgreen.com/fourbythree", W/2, H-24, "600 11px "+FONT);
-    return cv;
+    return fin();
   }
   if(mileBig){
     /* ---- streak milestone: metal masthead over a soft iridescent wash ----
@@ -3262,7 +3307,7 @@ function drawShareCard(){
     rr(x,1.5,1.5,W-3,H-3,R-1.5); x.strokeStyle="#d8d2c6"; x.lineWidth=3; x.stroke();
     /* score line */
     x.textAlign="center"; x.fillStyle="#4c4438"; x.font="600 15px "+FONT;
-    x.fillText(score+" pts · "+(mistakes?mistakes+" mistake"+(mistakes===1?"":"s"):"No mistakes")+(hubFirst?" · Hub First":"")+(revRainbow?" · Reverse Rainbow":(purpleFirst?" · Purple First":""))+(fast?" · Sub-90s":""),W/2,BAND+40);
+    x.fillText(score+" pts · "+(mistakes?mistakes+" mistake"+(mistakes===1?"":"s"):"No mistakes")+(calledRight&&won?" · Called It":hubFirst?" · Hub First":"")+(revRainbow?" · Reverse Rainbow":(purpleFirst?" · Purple First":""))+(fast?" · Sub-90s":""),W/2,BAND+40);
     /* guess grid */
     let ym=headH; const x0m=(W-gridW)/2;
     for(const g of guesses){
@@ -3278,7 +3323,7 @@ function drawShareCard(){
           x.fillStyle=ci>=0?COLORS[ci]:"#cfc7b4"; x.fillRect(px,ym,cell,cell);
         }
         x.restore();
-        if(w===special){ rr(x,px+1,ym+1,cell-2,cell-2,8); x.strokeStyle=GOLD; x.lineWidth=3; x.stroke(); }
+        if(w===special){ rr(x,px+1,ym+1,cell-2,cell-2,8); x.strokeStyle=hubRing(px,ym); x.lineWidth=3; x.stroke(); }
       });
       ym+=cell+gap;
     }
@@ -3294,7 +3339,7 @@ function drawShareCard(){
     x.fillText(urlM,startXM,H-24);
     if(fwM){ x.globalAlpha=0.5; x.drawImage(FISH,startXM+uwM+fgapM,(H-28)-fhM/2,fwM,fhM); x.globalAlpha=1; }
     x.textAlign="center";
-    return cv;
+    return fin();
   }
   if(rainbow){
     /* ---- RAINBOW: four diagonal colour bands behind a frosted panel ---- */
@@ -3328,13 +3373,13 @@ function drawShareCard(){
         const gl=x.createLinearGradient(px,y,px+cell,y+cell); gl.addColorStop(0,"rgba(255,255,255,.45)"); gl.addColorStop(.5,"rgba(255,255,255,0)"); gl.addColorStop(1,"rgba(0,0,0,.12)");
         x.fillStyle=gl; x.fillRect(px,y,cell,cell);
         x.restore();
-        if(w===special){ rr(x,px+1,y+1,cell-2,cell-2,8); x.strokeStyle=GOLD; x.lineWidth=3; x.stroke(); }
+        if(w===special){ rr(x,px+1,y+1,cell-2,cell-2,8); x.strokeStyle=hubRing(px,y); x.lineWidth=3; x.stroke(); }
       });
       y+=cell+gap;
     }
     x.fillStyle="#8a8174"; x.font="12px "+FONT; x.fillText("four categories · three words · one shared",W/2,H-44);
     x.font="600 11px "+FONT; x.fillText("hankgreen.com/fourbythree",W/2,H-24);
-    return cv;
+    return fin();
   }
   /* rounded card; effects STACK so combined results read together */
   x.save(); rr(x,0,0,W,H,R); x.clip();
@@ -3397,7 +3442,7 @@ function drawShareCard(){
     x.fillStyle=gt; x.fillText(b,W/2,140);
   } else {
     x.fillStyle=plain?"#7a7264":"#5d564a"; x.font="14px "+FONT;
-    x.fillText((won?score+" pts":"Out of guesses")+" · "+(mistakes?mistakes+" mistake"+(mistakes===1?"":"s"):"No mistakes")+(hubFirst?" · Hub First":"")+(revRainbow?" · Reverse Rainbow":(purpleFirst?" · Purple First":""))+(fast?" · Sub-90s":""),W/2,108);
+    x.fillText((won?score+" pts":"Out of guesses")+" · "+(mistakes?mistakes+" mistake"+(mistakes===1?"":"s"):"No mistakes")+(calledRight&&won?" · Called It":hubFirst?" · Hub First":"")+(revRainbow?" · Reverse Rainbow":(purpleFirst?" · Purple First":""))+(fast?" · Sub-90s":""),W/2,108);
   }
   /* guess grid */
   let y=headH;
@@ -3423,7 +3468,7 @@ function drawShareCard(){
         x.fillStyle="rgba(255,255,255,.5)"; x.beginPath(); x.ellipse(px+cell*0.32,y+cell*0.27,cell*0.17,cell*0.09,-0.5,0,7); x.fill();
       }
       x.restore();
-      if(w===special){ rr(x,px+1,y+1,cell-2,cell-2,8); x.strokeStyle=GOLD; x.lineWidth=3; x.stroke(); }
+      if(w===special){ rr(x,px+1,y+1,cell-2,cell-2,8); x.strokeStyle=hubRing(px,y); x.lineWidth=3; x.stroke(); }
     });
     y+=cell+gap;
   }
@@ -3440,7 +3485,7 @@ function drawShareCard(){
   x.fillText(url,startX,H-24);
   if(fw){ x.globalAlpha=0.5; x.drawImage(FISH,startX+uw+fgap,(H-28)-fh/2,fw,fh); x.globalAlpha=1; }
   x.textAlign="center";
-  return cv;
+  return fin();
 }
 /* feature-detect the Web Share API rather than sniffing the user agent */
 const CAN_SHARE=typeof navigator!=="undefined"&&typeof navigator.share==="function";
@@ -3611,9 +3656,9 @@ function resultDescription(){
   const {won,score,ruleBreaker,callFail}=calcScore();
   const head=dailyKey?fmtDate(dailyKey)+"\n":"";
   const tail="\nhttps://4x3.fun";   /* link at the bottom — full scheme so every app linkifies it */
-  if(callFail) return head+"0 points • Called the hub. Missed. 👑\nBold. Wrong, but bold."+tail;
+  if(callFail) return head+"0 points • Called the Wrong Hub\nBold. Wrong, but bold."+tail;
   if(ruleBreaker) return head+score+" points • RULE BREAKER 💀\n"+resultEmojiRows()+tail;
-  return head+(won?score+" points":"Out of guesses")+" • "+(mistakes?mistakes+" mistake"+(mistakes===1?"":"s"):"No mistakes")+"\n"+resultEmojiRows()+tail;
+  return head+(won?score+" points":"Out of guesses")+" • "+(mistakes?mistakes+" mistake"+(mistakes===1?"":"s"):"No mistakes")+(won&&calledRight?" • Called It 🎯":"")+"\n"+resultEmojiRows()+tail;
 }
 function feedbackText(){
   const won=mistakes<MAXM;
