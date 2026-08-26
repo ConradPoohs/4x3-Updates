@@ -223,6 +223,7 @@
       <div id="postHub" style="display:none">
         <div class="ph-head" id="phHead">Great work!</div>
         <div class="ph-date" id="phDate"></div>
+        <button id="phCallFbk" class="hbtn" style="display:none;margin:8px auto 0;font-size:13px" onclick="openCallFbk()">How was Call It? Tell Hank</button>
         <div class="ph-stats">
           <div class="ph-stat ph-s1"><b id="phPlayed">–</b><span>Completed</span></div>
           <div class="ph-stat ph-s2"><b id="phWin">–</b><span>Win %</span></div>
@@ -306,6 +307,20 @@
     <div style="display:flex;gap:10px;justify-content:center;margin-top:18px">
       <button id="callNo" onclick="closeCallModal()" style="padding:10px 18px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--ink);font-weight:700;cursor:pointer">Never mind</button>
       <button onclick="confirmCall()" style="padding:10px 18px;border-radius:12px;border:2px solid #d4a017;background:#d4a017;color:#fff;font-weight:800;cursor:pointer">Call it</button>
+    </div>
+  </div>
+</div>
+<div id="callIntro">
+  <div class="mback" onclick="closeCallIntro()"></div>
+  <div class="mcard" role="dialog" aria-modal="true" aria-label="New feature: Call It" style="max-width:340px;text-align:center">
+    <button class="mclose" onclick="closeCallIntro()" aria-label="Close">×</button>
+    <div style="font-size:20px;font-weight:800;margin:4px 0 10px">New: Call It</div>
+    <div style="font-size:15px;line-height:1.55;color:var(--mut)">Hey! You're in a little beta test of a new
+      feature where you can call the hub word. You can play normally — but if you want to try it out,
+      click on the word you think is the hub and then click <b style="color:var(--ink)">"Call It."</b></div>
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:18px">
+      <button onclick="openCallFbk()" style="padding:10px 16px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--ink);font-weight:700;cursor:pointer">Send feedback</button>
+      <button onclick="closeCallIntro()" style="padding:10px 18px;border-radius:12px;border:2px solid var(--ink);background:var(--ink);color:var(--paper);font-weight:800;cursor:pointer">Got it</button>
     </div>
   </div>
 </div>
@@ -408,12 +423,59 @@ function flipBoardDown(instant){
     else fl.style.transform="rotateY(180deg)";
   });
 }
-function callItEnabled(){ try{ return localStorage.getItem("x43_callit")==="1"; }catch(e){ return false; } }
+/* rollout: 5% beta cohort, deterministic by anon id so nobody flickers in and
+   out day to day. x43_callit "1" forces on (test menu / invite links), "0" is
+   an explicit opt-out; anything else falls through to the cohort. */
+function callCohort(){
+  try{
+    const a=localStorage.getItem("hg_anon")||"";
+    if(!a) return false;
+    let h=0; for(let i=0;i<a.length;i++) h=(h*31+a.charCodeAt(i))>>>0;
+    return h%100<5;
+  }catch(e){ return false; }
+}
+function callItEnabled(){
+  try{
+    const v=localStorage.getItem("x43_callit");
+    if(v==="1") return true;
+    if(v==="0") return false;
+  }catch(e){}
+  return callCohort();
+}
+let callIntroShown=false;
+function maybeCallIntro(){
+  if(callIntroShown) return;
+  callIntroShown=true;
+  try{ if(localStorage.getItem("x43_callit_seen")==="1") return; }catch(e){}
+  setTimeout(()=>{
+    if(over||guesses.length>0||hubCalled!==null) return;   /* the moment passed */
+    try{ localStorage.setItem("x43_callit_seen","1"); }catch(e){}
+    const m=document.getElementById("callIntro"); if(!m) return;
+    m.style.display="flex";
+    if(G){
+      G.fromTo(m.querySelector(".mback"),{opacity:0},{opacity:1,duration:.3});
+      G.fromTo(m.querySelector(".mcard"),{scale:.92,opacity:0,y:26},{scale:1,opacity:1,y:0,duration:.5,ease:"back.out(1.6)"});
+    }
+  },700);
+}
+function closeCallIntro(){
+  const m=document.getElementById("callIntro");
+  if(G){
+    G.to(m.querySelector(".mcard"),{scale:.93,opacity:0,y:14,duration:.22,ease:"power2.in"});
+    G.to(m.querySelector(".mback"),{opacity:0,duration:.25,onComplete:()=>{m.style.display="none";}});
+  } else m.style.display="none";
+}
+function openCallFbk(){
+  closeCallIntro();
+  openFbk();
+  const t=document.getElementById("fbkNotes");
+  if(t&&!t.value){ t.value="[Call It] "; try{ t.focus(); t.setSelectionRange(t.value.length,t.value.length); }catch(e){} }
+}
 function refreshCallBtn(){
   const b=document.getElementById("callItBtn"); if(!b) return;
   const show=callItEnabled()&&!over&&!isBeta&&!communityId&&!isPreview&&guesses.length===0&&hubCalled===null;
   b.style.display=show?"":"none";
-  if(show) b.disabled=selection.length!==1;   /* greyed until exactly one word is picked */
+  if(show){ b.disabled=selection.length!==1; maybeCallIntro(); }   /* greyed until exactly one word is picked */
 }
 function callIt(){
   if(over||guesses.length>0||hubCalled!==null||selection.length!==1) return;
@@ -2485,10 +2547,17 @@ function csPageToday(){
   const myBucket=(mistakes>=MAXM)?3:mistakes;
   const mist=[["Flawless","m0"],["One mistake","m1"],["Two mistakes","m2"],["Didn’t finish","m3"]];
   const mistRows=mist.map((r,i)=>csBarRow(r[0],i===3?"#c98a80":"#8f8574",d[r[1]]||0,d.plays||0,i===myBucket)).join("");
+  /* Call It (experiment): only appears once somebody has actually called —
+     bars are share-of-callers, not share-of-players (callers are rare) */
+  const callN=(+d.cw||0)+(+d.cl||0);
+  const callSec=callN?("<div class='cs-sec'><div class='cs-label'>Called the hub ("+callN.toLocaleString()+" dared)</div>"+
+    csBarRow("Called it right","#3a7fd0",+d.cw||0,callN,hubCalled!==null&&calledRight)+
+    csBarRow("Called it wrong","#c98a80",+d.cl||0,callN,callFailed())+
+    "</div>"):"";
   return "<div class='cs-diff'><span class='cs-label'>Difficulty</span>"+meter+"<b>"+dlabel+"</b>"+
       "<span class='cs-hint'>"+(+(d.avg_m||0)).toFixed(1)+" avg mistakes</span></div>"+
     "<div class='cs-sec'><div class='cs-label'>First category solved</div>"+firstRows+"</div>"+
-    "<div class='cs-sec'><div class='cs-label'>How it went</div>"+mistRows+"</div>";
+    "<div class='cs-sec'><div class='cs-label'>How it went</div>"+mistRows+"</div>"+callSec;
 }
 /* card 2 — the sort: slopegraph. Hank's predicted ranks on the left, the
    crowd's measured ranks on the right, one line per category — crossings ARE
@@ -2655,12 +2724,13 @@ function csPageLifetime(){
   const days=Object.keys(h);
   const games=days.length;
   if(!games) return "<p class='cs-note'>No history yet — this card grows with you.</p>";
-  let pts=0,wins=0,perfects=0,best=0,hubFirsts=0;
+  let pts=0,wins=0,perfects=0,best=0,hubFirsts=0,calls=0,callHits=0;
   days.forEach(k=>{ const r=h[k]||{};
     if(typeof r.s==="number"){ pts+=r.s; if(r.s>best) best=r.s; }
     if(r.w!==0) wins++;
     if(r.p) perfects++;
     if(r.hf) hubFirsts++;
+    if(r.ci){ calls++; callHits++; } else if(r.cf) calls++;
   });
   /* longest run of consecutive release-day wins */
   const dn=k=>Math.round(new Date(k+"T12:00:00").getTime()/86400000);
@@ -2676,6 +2746,7 @@ function csPageLifetime(){
     stat(perfects,"perfect games")+
     stat(longest,"longest streak")+
     stat(Math.round(100*hubFirsts/games)+"%","hub-first days")+
+    (calls?stat(callHits+" of "+calls,"hub calls hit"):"")+
     "</div>";
   /* streak percentile from the all-time distribution (fetched once, cached) */
   let pctLine="";
@@ -2831,6 +2902,7 @@ document.addEventListener("keydown",e=>{
   if(document.getElementById("shareModal").style.display==="flex") closeShareScreen();
   if(document.getElementById("fbkModal").style.display==="flex") closeFbk();
   if(document.getElementById("callModal").style.display==="flex") closeCallModal();
+  if(document.getElementById("callIntro").style.display==="flex") closeCallIntro();
 });
 function showPostHub(){
   if(!over||isBeta||communityId) return;
@@ -2843,6 +2915,7 @@ function showPostHub(){
     cs.ruleBreaker?"Rule Breaker.":cs.perfect?"Perfect!":cs.won?"Great work!":
     (hubCalled&&!calledRight)?"Bold. Wrong, but bold.":"Tough one.";
   try{ document.getElementById("phDate").textContent=fmtDate(dailyKey||todayStr()); }catch(e){}
+  try{ document.getElementById("phCallFbk").style.display=hubCalled!==null?"":"none"; }catch(e){}
   /* the NYT trio: completed, win %, current streak (all local) */
   try{
     const st=loadStats(), played=st.played||0, won=st.won||0;
@@ -3063,12 +3136,18 @@ function drawShareCard(){
   const plain=!(revRainbow||purpleFirst||hubFirst||hubMiddle||perfect);
   const S=2, M=14, W=420, R=26;
   const cell=44, gap=10, gridW=3*cell+2*gap;
+  /* a called win shows the BOARD, not the guess log: the final 3×3 with the
+     hub in the middle, exactly the pattern the player ended on (9 unique
+     words = 9 tiles, so slots maps 1:1). Every card style renders it with
+     its own cell treatment — the rows just come from slots instead. */
+  const boardMode=won&&calledRight;
+  const gridSrc=boardMode?[0,1,2].map(r=>slots.slice(3*r,3*r+3)):guesses;
   const rrPlaque=rrHank||rrCrowd;
   const plaque=rrPlaque||goldPlaque||silverPlaque||godDamnit;
   const mileBig=streakMile&&!plaque&&!ruleBreaker;   /* milestone gets its own card style */
   const mileH=(streakMile&&plaque)?42:0;             /* plaques keep the small ribbon instead */
   const BAND=76;                                     /* masthead height on the milestone card */
-  const headH=mileBig?BAND+66:((allRewards||godDamnit||rainbow||rrPlaque)?156:(ruleBreaker?150:130))+mileH, rows=guesses.length, footH=84;
+  const headH=mileBig?BAND+66:((allRewards||godDamnit||rainbow||rrPlaque)?156:(ruleBreaker?150:130))+mileH, rows=boardMode?3:guesses.length, footH=84;
   const H=callFail?212:headH+(rows?rows*(cell+gap)-gap:0)+footH;   /* call-fail: fixed-height card, no guess grid (rows may be 0) */
   const cv=document.createElement("canvas");
   cv.width=(W+2*M)*S; cv.height=(H+2*M)*S;
@@ -3078,18 +3157,27 @@ function drawShareCard(){
      plaques, streak banners, rainbow, all of them. fin() replaces bare returns. */
   const fin=()=>{
     if(!(won&&calledRight)) return cv;
+    /* a BLUE prize ribbon (first place, and never gold-on-gold): a diagonal
+       satin band with forked tails, floating just inside the top-right corner */
     x.save();
     rr(x,0,0,W,H,R); x.clip();
-    x.translate(W-58,58); x.rotate(Math.PI/4);
-    x.shadowColor="rgba(40,30,5,.35)"; x.shadowBlur=7; x.shadowOffsetY=2;
+    x.translate(W-74,74); x.rotate(Math.PI/4);
+    const band=()=>{ x.beginPath();
+      x.moveTo(-78,-15); x.lineTo(78,-15); x.lineTo(64,0); x.lineTo(78,15);
+      x.lineTo(-78,15); x.lineTo(-64,0); x.closePath(); };
+    x.shadowColor="rgba(12,32,60,.38)"; x.shadowBlur=8; x.shadowOffsetY=3;
     const rg=x.createLinearGradient(0,-15,0,15);
-    rg.addColorStop(0,"#f7df93"); rg.addColorStop(.5,"#dcb442"); rg.addColorStop(1,"#c89f24");
-    x.fillStyle=rg; x.fillRect(-110,-15,220,30);
+    rg.addColorStop(0,"#7fb1ea"); rg.addColorStop(.45,"#3a7fd0"); rg.addColorStop(1,"#1a4f96");
+    band(); x.fillStyle=rg; x.fill();
     x.shadowColor="transparent";
-    x.fillStyle="rgba(86,58,8,.55)"; x.fillRect(-110,-15,220,1.5); x.fillRect(-110,13.5,220,1.5);
+    band(); x.strokeStyle="rgba(8,26,52,.55)"; x.lineWidth=1.5; x.stroke();
+    x.save(); x.setLineDash([3,3]); x.strokeStyle="rgba(255,255,255,.55)"; x.lineWidth=1;   /* stitching */
+    x.beginPath(); x.moveTo(-58,-11); x.lineTo(58,-11); x.moveTo(-58,11); x.lineTo(58,11); x.stroke(); x.restore();
     x.textAlign="center"; x.textBaseline="middle"; x.font="800 13px "+FONT;
-    x.fillStyle="rgba(255,249,214,.6)"; x.fillText("C A L L E D  I T",0,1.5);
-    x.fillStyle="#5a4404"; x.fillText("C A L L E D  I T",0,0);
+    try{ x.letterSpacing="2px"; }catch(e){}
+    x.fillStyle="rgba(6,24,48,.5)"; x.fillText("CALLED IT",0,1.5);
+    x.fillStyle="#fff"; x.fillText("CALLED IT",0,0);
+    try{ x.letterSpacing="0px"; }catch(e){}
     x.textBaseline="alphabetic";
     x.restore();
     return cv;
@@ -3148,7 +3236,7 @@ function drawShareCard(){
       x.fillStyle=dg; x.beginPath(); x.arc(dx,dy,dr,0,7); x.fill();
     }
     let gy=headH; const gx0=(W-gridW)/2;                 /* the guesses, greyed and grimed */
-    for(const g of guesses){
+    for(const g of gridSrc){
       g.forEach((w,k)=>{
         const px=gx0+k*(cell+gap);
         x.save(); rr(x,px,gy,cell,cell,8); x.clip();
@@ -3235,7 +3323,7 @@ function drawShareCard(){
     eng(P.title, W/2, 140, "800 23px "+FONT);
     if(streakMile) drawMileRibbon(x,W,headH-38,streakMile,FONT);
     let yy=headH; const x0p=(W-gridW)/2;
-    for(const g of guesses){
+    for(const g of gridSrc){
       g.forEach((w,k)=>{
         const px=x0p+k*(cell+gap);
         x.save(); rr(x,px,yy,cell,cell,8); x.clip();
@@ -3310,7 +3398,7 @@ function drawShareCard(){
     x.fillText(score+" pts · "+(mistakes?mistakes+" mistake"+(mistakes===1?"":"s"):"No mistakes")+(calledRight&&won?" · Called It":hubFirst?" · Hub First":"")+(revRainbow?" · Reverse Rainbow":(purpleFirst?" · Purple First":""))+(fast?" · Sub-90s":""),W/2,BAND+40);
     /* guess grid */
     let ym=headH; const x0m=(W-gridW)/2;
-    for(const g of guesses){
+    for(const g of gridSrc){
       g.forEach((w,k)=>{
         const px=x0m+k*(cell+gap);
         x.save(); rr(x,px,ym,cell,cell,9); x.clip();
@@ -3362,7 +3450,7 @@ function drawShareCard(){
     [COLORS[2],COLORS[1],COLORS[0],COLORS[3]].forEach((c,i)=>gt.addColorStop(i/3,c));
     x.fillStyle=gt; x.fillText(b,W/2,140);
     let y=headH; const x0=(W-gridW)/2;
-    for(const g of guesses){
+    for(const g of gridSrc){
       g.forEach((w,k)=>{
         const px=x0+k*(cell+gap);
         x.save(); rr(x,px,y,cell,cell,9); x.clip();
@@ -3447,7 +3535,7 @@ function drawShareCard(){
   /* guess grid */
   let y=headH;
   const x0=(W-gridW)/2;
-  for(const g of guesses){
+  for(const g of gridSrc){
     g.forEach((w,k)=>{
       const px=x0+k*(cell+gap);
       x.save(); rr(x,px,y,cell,cell,9); x.clip();
@@ -3737,6 +3825,7 @@ function recordHistory(){
       rrh:cs.rrHank?1:0, rrc:cs.rrCrowd?1:0, csn:cs.cleanSprint?1:0, fri:cs.foolsRush?1:0,
       bb:cs.buzzer?1:0, cc:cs.closeCall?1:0, fls:cs.frictionless?1:0, cen:cs.century?1:0, sm:cs.smusher?1:0, hu:cs.human?1:0,
       gold:cs.goldPlaque?1:0, silver:cs.silverPlaque?1:0,
+      ci:(cs.won&&calledRight)?1:0, cf:cs.callFail?1:0,   /* hub called: won on it / lost the board to it */
       rel:rel,   /* counts toward the streak; preserved across archive replays */
       ts:Date.now()};
     localStorage.setItem("x43_history",JSON.stringify(h));
@@ -3753,7 +3842,8 @@ function recordHistory(){
         fl:(cs2.revRainbow?1:0)|(cs2.rainbow?2:0)|(cs2.godDamnit?4:0)|(cs2.hubFirst?8:0)|
            (cs2.purpleFirst?16:0)|(cs2.perfect?32:0)|(cs2.fast?64:0)|(cs2.ruleBreaker?128:0)|
            (cs2.rrHank?256:0)|(cs2.rrCrowd?512:0)|(cs2.cleanSprint?1024:0)|(cs2.foolsRush?2048:0)|
-           (cs2.buzzer?4096:0)|(cs2.closeCall?8192:0)|(cs2.frictionless?16384:0)|(cs2.century?32768:0),
+           (cs2.buzzer?4096:0)|(cs2.closeCall?8192:0)|(cs2.frictionless?16384:0)|(cs2.century?32768:0)|
+           (cs2.won&&calledRight?65536:0)|(cs2.callFail?131072:0),
         oa:oaCount, wg:wrongTrios,
         /* translate display→authored so crowd measurement stays unbiased.
            NB: ct.so is a digit STRING (catTelemetry joins it) — calling .map on it
