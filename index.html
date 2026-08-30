@@ -1003,7 +1003,11 @@ function buildTiles(){
     const inner=document.createElement("div");
     inner.className="tin";
     inner.style.animationDelay=(-Math.random()*16).toFixed(2)+"s"; /* desync the color drift */
-    {  /* long words break at a syllable with a visible hyphen instead of
+    if(/^[\p{Extended_Pictographic}\uFE0F\u200D]+$/u.test(w)){
+      /* emoji-only tiles (\uD83D\uDCAF etc.) render big instead of text-sized */
+      inner.classList.add("bigmoji");
+      inner.appendChild(document.createTextNode(w));
+    } else {  /* long words break at a syllable with a visible hyphen instead of
           wherever the tile edge happens to fall (soft hyphen: invisible
           unless the browser actually breaks there) */
       const h=hyphAt(w,8);
@@ -1782,6 +1786,42 @@ const DEFS={
     "Shampoo Commercial Promises":{VOLUME:"Big, lifted, more-hair-than-you-have hair.",BOUNCE:"Hair that springs back with every step.",BODY:"Fullness and thickness."},
     "Add \"The\" for a Stephen King Novel":{SHINING:"The Shining: the Overlook Hotel breaks the Torrance family.","GREEN MILE":"The Green Mile: death row, and a gentle giant with a gift.",BODY:"The Body: four boys go looking for one (it became Stand By Me)."},
     "___ Language":{SIGN:"Speaking with the hands, like ASL.",LOVE:"The five ways people give and receive affection.",BODY:"What your posture and gestures say without words."}
+  },
+  BAKER:{
+    "Classic Jobs":{FARMER:"Up at dawn to work the land.",BARBER:"Scissors and clippers.",BAKER:"Up even earlier than the farmer to get the dough in the oven."},
+    "Doctor Who Actors":{TENNANT:"David, the beloved Tenth (and Fourteenth) Doctor.",CAPALDI:"Peter, the flinty Twelfth Doctor.",BAKER:"Tom (the scarf) and Colin (the coat), two different Doctors for one surname."},
+    "Cascade Volcanoes":{RAINIER:"The giant looming over Seattle.","ST. HELENS":"The one that blew its top in 1980.",BAKER:"The heavily glaciated peak near the Canadian border."},
+    "___ Street":{SESAME:"The location of the famous kid's show.",WALL:"New York's money mile.",BAKER:"221B Baker Street: Sherlock Holmes's address."}
+  },
+  CHOPPED:{
+    "Ways to Cut an Onion":{DICED:"Cut into neat little cubes.",MINCED:"Cut as finely as the knife allows.",CHOPPED:"Cut into rough, medium-sided pieces."},
+    "What Happened to the Firewood":{STACKED:"Piled neatly to season for winter.",BURNED:"Its final, glorious purpose.",CHOPPED:"Cut down to burnable size."},
+    "Gen-Z for \"Not Cute\"":{BUSTED:"Looking rough, per the youths.",ROUGH:"Not having a great face day.",CHOPPED:"Decidedly unattractive, as an unc might be."},
+    "Cooking Competition Shows":{"IRON CHEF":"Battle cuisine in Kitchen Stadium.","NAILED IT":"Amateur bakers fail gloriously on purpose.",CHOPPED:"Four chefs, one mystery basket, three rounds."}
+  },
+  RATE:{
+    "To Judge Out of Five Stars":{SCORE:"To assign points to something.",GRADE:"To mark it...often A through F.",RATE:"To give it the stars you think it deserves."},
+    "A Speed of Progress":{PACE:"How fast things are moving along.",CLIP:"A brisk speed, as in moving at quite a clip.",RATE:"How fast it's happening, as in \"at this rate...\""},
+    "Loan Paperwork Words":{PRINCIPAL:"The amount you actually borrowed.",TERM:"How long you have to pay it back.",RATE:"The interest percentage that makes the bank its money."},
+    "Contains a Secret RAT":{BRAT:"The rat hides at the bratty end: b-RAT.",PIRATE:"The rat stows away amidships: pi-RAT-e.",RATE:"The rat is right up front."}
+  },
+  TRAIN:{
+    "Mass Transit Vehicles":{BUS:"Like a car but a lot of people can get on it.",FERRY:"The boat that shuttles commuters across the water.",TRAIN:"Cars coupled together, rolling on rails."},
+    "Often Parts of a Wedding Dress":{VEIL:"The sheer fabric over the face, lifted for the kiss.",BODICE:"The fitted upper portion of the gown.",TRAIN:"The long trailing fabric."},
+    "Ways to Prepare":{DRILL:"To run the same play over and over.",REHEARSE:"To practice the performance before showtime.",TRAIN:"To build skill and strength through repetition."},
+    "Things That Can Be Derailed":{CAREER:"One scandal can do it.",CONVERSATION:"One tangent can do it.",TRAIN:"The literal one. Please stay on the rails."}
+  },
+  CAT:{
+    "Carnivores":{"POLAR BEAR":"The Arctic's seal-hunting apex predator.","PITCHER PLANT":"The plant that drowns and digests insects in its cup.",CAT:"An obligate carnivore, even Garfield"},
+    "Jazz Slang for a Cool Guy":{"DADDY-O":"A beatnik term of address for a pal.",HEPSTER:"A fellow who's hip to the scene.",CAT:"A cool character."},
+    "Medical Scans":{MRI:"Magnets and radio waves image your soft tissue.",PET:"Traces a radioactive marker to watch your body work.",CAT:"X-ray slices assembled into a 3D picture (also called CT)."},
+    "Heavy Equipment Brands":{DEERE:"The green-and-yellow tractor giant.",KOMATSU:"Japan's construction machinery powerhouse.",CAT:"Caterpillar's big yellow machines now almost always go by \"CAT\""}
+  },
+  C:{
+    "Roman Numerals":{X:"Ten",L:"Fifty",C:"One hundred"},
+    "C-Based Programming Languages":{"C++":"C...plus classes!",JAVA:"A language that borrows C's syntax.",C:"The 1972 original that everything else grew from."},
+    "Famously Vitamins":{D:"The one you make from sunshine.",B12:"The one vegans have to keep an eye on.",C:"The one that prevents scurvy."},
+    "Means 100":{"10²":"Ten squared.","💯":"Keeping it, as they say.",C:"Happy hundredth 4x3, everybody!"}
   }
 };
 /* post-game easter egg: tap the hub to press it in and burst out emojis */

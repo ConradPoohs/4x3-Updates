@@ -111,6 +111,7 @@
     box-shadow:0 0 0 rgba(43,38,32,0);
     backface-visibility:hidden; -webkit-backface-visibility:hidden;
   }
+  .tin.bigmoji{font-size:clamp(24px,7vw,34px); letter-spacing:0;} /* emoji-only tiles (💯) render big */
   /* reverse face — the Hanklerfish easter egg, glimpsed only mid-flip */
   .tback{position:absolute; inset:0; border-radius:10px; border:1.5px solid var(--line);
     background:#b0cfd4 url("lightfish2.jpg") center/cover no-repeat;
