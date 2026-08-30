@@ -916,6 +916,15 @@ function startGame(){
   const words=[special,...cats.flatMap(c=>c.words)];
   for(let i=words.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[words[i],words[j]]=[words[j],words[i]];}
   slots=words.slice();
+  /* special boards open with a pinned top row that reads as a phrase.
+     Applies only when all three tiles are present; a manual shuffle undoes it. */
+  const PINROWS=[["99TH","4X3","PUZZLE"],["COYOTE","VS","ACME"]];
+  for(const top of PINROWS){
+    if(top.includes(special)&&top.every(w=>words.includes(w))){
+      slots=[...top,...words.filter(w=>!top.includes(w))];
+      break;
+    }
+  }
   /* if there's saved progress for this puzzle, reuse its board order so tiles
      sit where the player left them instead of reshuffling */
   const saved=loadGame();
@@ -959,6 +968,7 @@ function startGame(){
   const smb=document.getElementById("submitBtn");
   smb.textContent="Submit"; smb.onclick=()=>submitGuess(); smb.disabled=true;
   buildTiles();
+  hundredBg();
   refreshCallBtn();
   if(resuming){
     restoreGame(saved);
@@ -989,6 +999,38 @@ function hyphAt(w,min){
   }
   return best;
 }
+/* one-off: the 100th puzzle (hub C, "Means 100") gets a wash of huge, nearly
+   transparent 💯s behind the tiles. Keyed to the board content so test links
+   get it too; every other puzzle is untouched. */
+function hundredBg(){
+  const old=document.getElementById("hundredBg");
+  if(old) old.remove();
+  if(special!=="C"||!cats.some(c=>norm(c.name)==="MEANS 100")) return;
+  const bg=document.createElement("div");
+  bg.id="hundredBg";
+  bg.setAttribute("aria-hidden","true");
+  /* fixed full-page layer on the beige backdrop, tucked behind the white card */
+  bg.style.cssText="position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:-1;";
+  /* clustered in the top band around the logo, where the beige shows on mobile */
+  for(let i=0;i<8;i++){
+    const e=document.createElement("div");
+    e.textContent="💯";
+    e.style.cssText="position:absolute;font-size:"+(70+Math.random()*70)+"px;opacity:0.07;"+
+      "left:"+(i/8*100+Math.random()*10-8)+"%;top:"+(Math.random()*16-6)+"%;"+
+      "transform:rotate("+(Math.random()*60-30)+"deg);";
+    bg.appendChild(e);
+  }
+  /* a few strays lower down for the wide-screen side gutters */
+  for(let i=0;i<4;i++){
+    const e=document.createElement("div");
+    e.textContent="💯";
+    e.style.cssText="position:absolute;font-size:"+(100+Math.random()*80)+"px;opacity:0.05;"+
+      (Math.random()<0.5?"left:-4%;":"right:-4%;")+"top:"+(25+Math.random()*60)+"%;"+
+      "transform:rotate("+(Math.random()*60-30)+"deg);";
+    bg.appendChild(e);
+  }
+  document.body.prepend(bg);
+}
 function buildTiles(){
   const b=document.getElementById("board");
   b.innerHTML=""; tiles={};
@@ -1003,7 +1045,17 @@ function buildTiles(){
     const inner=document.createElement("div");
     inner.className="tin";
     inner.style.animationDelay=(-Math.random()*16).toFixed(2)+"s"; /* desync the color drift */
-    if(/^[\p{Extended_Pictographic}\uFE0F\u200D]+$/u.test(w)){
+    if(special==="ACME"&&w==="COYOTE"){
+      /* one-off: the Coyote vs Acme board puts the man himself on his tile */
+      const img=document.createElement("img");
+      img.src="Coyote.webp"; img.alt="";
+      img.style.cssText="position:absolute;right:3px;top:50%;transform:translateY(-50%);height:88%;width:auto;object-fit:contain;opacity:0.85;pointer-events:none;";
+      inner.appendChild(img);
+      const sp=document.createElement("span");
+      sp.textContent=w;
+      sp.style.cssText="position:relative;z-index:1;text-shadow:0 1px 3px rgba(255,255,255,.8);";
+      inner.appendChild(sp);
+    } else if(/^[\p{Extended_Pictographic}\uFE0F\u200D]+$/u.test(w)){
       /* emoji-only tiles (\uD83D\uDCAF etc.) render big instead of text-sized */
       inner.classList.add("bigmoji");
       inner.appendChild(document.createTextNode(w));
@@ -1822,6 +1874,18 @@ const DEFS={
     "C-Based Programming Languages":{"C++":"C...plus classes!",JAVA:"A language that borrows C's syntax.",C:"The 1972 original that everything else grew from."},
     "Famously Vitamins":{D:"The one you make from sunshine.",B12:"The one vegans have to keep an eye on.",C:"The one that prevents scurvy."},
     "Means 100":{"10²":"Ten squared.","💯":"Keeping it, as they say.",C:"Happy hundredth 4x3, everybody!"}
+  },
+  PUZZLE:{
+    "What This Is, in Three Words":{"99TH":"One more until 100!","4X3":"The game you are playing right now.",PUZZLE:"Do I have anything special planned tomorrow??"},
+    "A Real Head-Scratcher":{RIDDLE:"A question built to trick you.",ENIGMA:"A mystery that resists explanation.",PUZZLE:"Anything that takes real thought to figure out."},
+    "To Bewilder":{STUMP:"To leave someone with no idea.",BAFFLE:"To confuse completely.",PUZZLE:"To leave someone confused."},
+    "Things That Might Have 1000 Pieces":{"A BROKEN MIRROR":"Seven years' bad luck!","LEGO SET":"And one of them will find your bare foot.",PUZZLE:"The pieces on the dining table all winter."}
+  },
+  ACME:{
+    "A Certain Looney Legal Battle":{COYOTE:"The plaintiff: a certain wily desert canid.",VS:"The abbreviation between every courtroom matchup.",ACME:"The defendant: supplier of every faulty rocket and anvil."},
+    "The Very Top":{APEX:"The pointed summit of anything.",ZENITH:"The high point, directly overhead.",ACME:"The peak of perfection (yes, it's a real word!)"},
+    "Fictional Companies":{SKYNET:"The AI defense firm that ends the world in Terminator.","DUNDER MIFFLIN":"Scranton's finest paper company.",ACME:"The Looney Tunes catalog that ships everything, instantly."},
+    "Anagrams":{CAME:"...and went.",MACE:"medieval club, or pepper spray.",ACME:"The same four letters, one more time."}
   }
 };
 /* post-game easter egg: tap the hub to press it in and burst out emojis */
