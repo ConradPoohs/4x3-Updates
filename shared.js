@@ -75,14 +75,14 @@ function scoringHTML(brag){
       row("A slip with only two groups left","−"+MISS_LATE,"bad")+
     "</div>"+
     "<div class='scoresec'><b>Bonuses</b>"+
-      row("Hub First — lead every guess with the shared word","+"+HUB_BONUS,"good")+
-      row("Hub Middle — place the shared word second every guess","+"+HUB_MID_BONUS,"good")+
-      row("Blue First — solve the blue group first","+"+BLUE_BONUS,"good")+
-      row("Purple First — solve the purple group first","+"+PURPLE_BONUS,"good")+
-      row("Reverse Rainbow — purple → blue → green → yellow","+"+RAINBOW_BONUS,"good")+
-      row("Sub-90s — finish in under 90 seconds","+"+SPEED_BONUS,"good")+
-      row("Efficient — solve in the "+MIN_CLICKS+"-click minimum (no wasted taps)","+"+CLICK_BONUS,"good")+
-      row("Daily streak — for each day of your current streak","+1 / day","good")+
+      row("Hub First: Lead every guess with the shared word","+"+HUB_BONUS,"good")+
+      row("Hub Middle: Place the shared word second every guess","+"+HUB_MID_BONUS,"good")+
+      row("Blue First: Solve the blue group first","+"+BLUE_BONUS,"good")+
+      row("Purple First: Solve the purple group first","+"+PURPLE_BONUS,"good")+
+      row("Reverse Rainbow: Purple → blue → green → yellow","+"+RAINBOW_BONUS,"good")+
+      row("Sub-90s: Finish in under 90 seconds","+"+SPEED_BONUS,"good")+
+      row("Efficient: Solve in the "+MIN_CLICKS+"-click minimum (no wasted taps)","+"+CLICK_BONUS,"good")+
+      row("Daily streak: For each day of your current streak","+1 / day","good")+
     "</div>"+
     (brag?("<div class='scoresec'><b>Just for bragging (no points)</b>"+
       note("🌈 Rainbow","Solve yellow → green → blue → purple")+
@@ -90,8 +90,8 @@ function scoringHTML(brag){
       note("🦚 Grue","Solve purple → green → blue → yellow")+
       note("😤 Frik!","A perfect run (no mistakes + Hub First) ruined only by a green↔yellow or green↔blue swap")+
       note("🌙 The Day Before","Play the day's puzzle between midnight and 1 am")+
-      note("🖲️ Click Happy","Win after "+MEGA_CLICKS+"+ clicks. Why?")+
-      note("✦ Streak milestones","A special banner — here and on your share card — the day your streak hits "+STREAK_MILESTONES.join(", ")+": silver at 5 and 10, gold from 25 up")+
+      note("🖲️ Click Happy","Win after "+MEGA_CLICKS+"+ clicks.")+
+      note("✦ Streak milestones","A special banner (here and on your share card) the day your streak hits "+STREAK_MILESTONES.join(", ")+": silver at 5 and 10, gold from 25 up")+
       note("🥞 Smusher","Try SMUSH (our other word game), then finish a 4×3")+
       note("🎙️ Human","Check out the Humans podcast, then finish a 4×3")+
       note("🔨 Button Smasher","When the game's over, the hub can take 20 more hits. See what happens")+
@@ -102,8 +102,8 @@ function scoringHTML(brag){
       note("🥈 Silver plaque","A perfect game in under 120 seconds")+
     "</div>"+
     "<div class='scoresec'><b>Rule breaker</b>"+
-      row("RULE BREAKER — put the shared word LAST in every guess",RULE_BREAKER_SCORE,"bad")+
-      note("","Wipes every point you earned — score and streak bonus included — and leaves you at "+RULE_BREAKER_SCORE+". The shared word is meant to lead, not trail.")+
+      row("RULE BREAKER: put the shared word LAST in every guess",RULE_BREAKER_SCORE,"bad")+
+      note("","Wipes every point you earned (score and streak bonus included) and leaves you at "+RULE_BREAKER_SCORE+". Why? Because life isn’t fair.")+
     "</div>";
 }
 

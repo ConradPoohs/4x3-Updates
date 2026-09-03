@@ -273,7 +273,7 @@
       <div id="fbDone" style="display:none;text-align:center;padding:14px 6px">
         <div style="font-size:34px">✅</div>
         <b style="display:block;font-size:17px;margin:6px 0 2px">Feedback sent — thank you!</b>
-        <div style="color:var(--mut);font-size:13.5px">Hank reads every one of these.</div>
+        <div style="color:var(--mut);font-size:13.5px">These are so important to help make the game better!</div>
         <button class="hbtn" style="margin-top:12px" onclick="editFeedback()">Change my answers</button>
       </div>
     </div>
@@ -355,7 +355,7 @@
   <div class="mcard" role="dialog" aria-modal="true" aria-label="Send feedback">
     <button class="mclose" onclick="closeFbk()" aria-label="Close">×</button>
     <b>Feedback 💌</b>
-    <p style="font-size:13.5px;color:var(--mut);margin:8px 0 10px">Something broken, unfair, or delightful? Tell Hank.</p>
+    <p style="font-size:13.5px;color:var(--mut);margin:8px 0 10px">Something broken, unfair, or delightful? Let me know!</p>
     <textarea id="fbkNotes" style="width:100%;min-height:90px;border:1.5px solid var(--line);border-radius:8px;padding:8px;font-size:14px;font-family:inherit" placeholder="What's on your mind?"></textarea>
     <label style="display:block;font-size:13px;margin:10px 0 4px">Your name (optional)</label>
     <input type="text" id="fbkName" maxlength="40" autocomplete="nickname">
@@ -456,12 +456,11 @@ function callCohort(){
   }catch(e){ return false; }
 }
 function callItEnabled(){
-  try{
-    const v=localStorage.getItem("x43_callit");
-    if(v==="1") return true;
-    if(v==="0") return false;
-  }catch(e){}
-  return callCohort();
+  /* BETA PAUSED (2026-09-02): the 5% cohort is switched off for now — only the
+     test flag enables the button. Flip the return back to callCohort() (or
+     true) to resume. Everything downstream (scoring, cards, stats, saves with
+     hc/hcr) stays live so already-called games keep rendering correctly. */
+  try{ return localStorage.getItem("x43_callit")==="1"; }catch(e){ return false; }
 }
 let callIntroShown=false;
 function maybeCallIntro(){
@@ -742,7 +741,7 @@ async function init(){
 function setupPlay(){
   const bb=document.getElementById("betaBanner");
   if(isDemoFB){
-    bb.textContent="Couldn't load today's puzzle — this is a PRACTICE board and won't count. Refresh to try again.";
+    bb.textContent="Couldn't load today's puzzle, so this is a practice board. It won’t count, but you can play! Refresh to try again.";
     bb.style.display="";
   } else bb.style.display=isBeta?"":"none";
   /* today's daily shows no date line at all; archived (past) puzzles get a dated pill */
@@ -795,7 +794,7 @@ async function checkNewDay(){
         loadedDay=todayStr(); rolloverTries=0;
         if(!over&&guesses.length>0){           /* mid-game: don't reset the board */
           pendingKey=k;
-          toast("A new puzzle is ready — it'll be here when you finish.");
+          toast("A new puzzle is ready! It'll be here when you finish.");
           return;
         }
         if(document.getElementById("modal").style.display==="flex") closeModal();
@@ -831,7 +830,7 @@ function gameKey(){
 let storageOk=true;
 try{ localStorage.setItem("x43_probe","1"); localStorage.removeItem("x43_probe"); }
 catch(e){ storageOk=false;
-  setTimeout(()=>{ try{ toast("Heads up: this browser mode can't save progress or streaks."); }catch(_){} },2500);
+  setTimeout(()=>{ try{ toast("FYI in a private browser mode the game can't save progress or streaks."); }catch(_){} },2500);
 }
 function loadGame(){
   const k=gameKey(); if(!k) return null;
@@ -1994,11 +1993,11 @@ function tapWord(w){
   if(i>=0) selection.splice(i,1);
   else if(selection.length<3){
     const shared=sharedSet();
-    if(shared.has(w)&&selection.some(x=>shared.has(x))){ toast("Just one shared word per group."); return; }
+    if(shared.has(w)&&selection.some(x=>shared.has(x))){ toast("Only one shared word per group!"); return; }
     selection.push(w);
     /* the teaching moment: a full group of three that reuses none of a solved category */
     if(selection.length===3&&solvedIdx.length>=1&&sharedCount()===0)
-      toast("All four categories share a word",3600);
+      toast("Remember, all four categories share a word.",3600);
   }
   else return;
   if(!startTime) startTime=Date.now();   /* the first real decision starts the clock */
@@ -2119,7 +2118,7 @@ function wrongAnim(sel,oneAway){
   if(wrongTrios.length<3) wrongTrios.push(sel.slice());   /* the actual words, for the crowd's "common wrong groupings" */
   saveGame();
   toast(calledRight?(oneAway?"One away — a mistake, but the board is safe. You called it.":"A mistake — but you called it. Play on.")
-       :(oneAway?"One away!":"Nope."));
+       :(oneAway?"One away!":"Oooo…Not even close…."));
   if(G){
     animating=true; updateButtons();
     sel.forEach((w,k)=>{
@@ -2438,7 +2437,7 @@ function confettiBurst(x,y){
    move the counter; achievement-only items have delta 0. Sum of deltas = score. */
 function tallyItems(cs){
   const it=[];
-  if(cs.ruleBreaker){ it.push(["💀","Rule Breaker — shared word went last every guess",cs.score]); return it; }
+  if(cs.ruleBreaker){ it.push(["💀","Rule Breaker (shared word went last every guess)",cs.score]); return it; }
   it.push(["✅","Completed!",100]);   /* base for a solve — lands first and runs the total up to 100 */
   if(penalty>0) it.push(["💔",mistakes+" mistake"+(mistakes===1?"":"s"),-penalty]);
   if(cs.hubFirst) it.push(calledRight?["🎯","Called It",HUB_BONUS]:["🔝","Hub First",HUB_BONUS]);
@@ -2446,35 +2445,35 @@ function tallyItems(cs){
   if(cs.blueFirst) it.push(["🔵","Blue First",BLUE_BONUS]);
   if(cs.purpleFirst) it.push(["🟣","Purple First",PURPLE_BONUS]);
   if(cs.revRainbow) it.push(["🌈","Reverse Rainbow",RAINBOW_BONUS]);
-  if(cs.rrHank&&cs.rrCrowd) it.push(["🏅","Reverse Rainbow (Both Versions) — you and the crowd agree, backwards",0]);
+  if(cs.rrHank&&cs.rrCrowd) it.push(["🏅","Reverse Rainbow (Both Versions)",0]);
   else if(cs.rrHank) it.push(["🏅","Reverse Rainbow (Hank's Version)",0]);
   else if(cs.rrCrowd) it.push(["🏅","Reverse Rainbow (Crowd's Version)",0]);
-  if(cs.cleanSprint) it.push(["⚡","Clean Sprint — perfect, under 90 seconds",0]);
-  if(cs.foolsRush) it.push(["🃏","Fools Rush In — hardest first, under 90 seconds",0]);
-  if(cs.frictionless) it.push(["🧈","Frictionless — minimum clicks, under 90 seconds",0]);
-  if(cs.buzzer) it.push(["🏀","Buzzer Beater — solved in the day's final hour",0]);
-  if(cs.closeCall) it.push(["😅","Close Call — two One-Aways and lived to tell",0]);
-  if(cs.century) it.push(["💯","Century Club — your 100th finished puzzle",0]);
+  if(cs.cleanSprint) it.push(["⚡","Clean Sprint (perfect, under 90 seconds)",0]);
+  if(cs.foolsRush) it.push(["🃏","Fools Rush In (hardest first, under 90 seconds)",0]);
+  if(cs.frictionless) it.push(["🧈","Frictionless (minimum clicks, under 90 seconds)",0]);
+  if(cs.buzzer) it.push(["🏀","Buzzer Beater (solved in the final hour)",0]);
+  if(cs.closeCall) it.push(["😅","Close Call (two One-Aways and lived to tell)",0]);
+  if(cs.century) it.push(["💯","Century Club (your 100th finished puzzle)",0]);
   if(cs.fast) it.push(["⚡","Solved under 90 seconds",SPEED_BONUS]);
   if(cs.perfectBonus) it.push(["💯","Perfect Game",cs.perfectBonus]);
-  if(cs.minClicks) it.push(["🖱️","Efficient — the "+MIN_CLICKS+"-click minimum",CLICK_BONUS]);
+  if(cs.minClicks) it.push(["🖱️","Efficient (the "+MIN_CLICKS+"-click minimum)",CLICK_BONUS]);
   if(cs.streak>0) it.push(["🔥",cs.streak+"-day streak",cs.streak]);
   if(cs.streakMile) it.push(["✦","Streak of "+cs.streakMile+" — "+cs.streakMile+" days in a row!",0]);
-  if(cs.topScore) it.push(["🏆","Top Score — a new personal best!",0]);
-  if(cs.beatAvg) it.push(["📈","Above Average — beat your average",0]);
-  if(cs.perfect&&!cs.allRewards&&!cs.godDamnit) it.push(["✨","Perfect — no mistakes",0]);
-  if(cs.rainbow) it.push(["🏳️‍🌈","Rainbow — yellow → green → blue → purple",0]);
-  if(cs.grellow) it.push(["🎾","Grellow — purple → blue → yellow → green",0]);
-  if(cs.grue) it.push(["🦚","Grue — purple → green → blue → yellow",0]);
-  if(cs.godDamnit) it.push(["😤","Frik! — perfect but for one swap",0]);
-  if(cs.dayBefore) it.push(["🌙","The Day Before — played 12–1am",0]);
-  if(cs.megaClicks) it.push(["🖲️","Click Happy — "+clicks+" clicks. Why?",0]);
-  if(cs.smusher) it.push(["🥞","Smusher — you've played SMUSH!",0]);
-  if(cs.pathfinder) it.push(["🧭","Pathfinder — you helped chart today's difficulty",0]);
-  if(cs.human) it.push(["🎙️","Human — you checked out the podcast",0]);
-  if(cs.bsmash) it.push(["🔨","Button Smasher — the hub can take it",0]);
-  if(cs.goldPlaque) it.push(["🥇","Gold Plaque — perfect, under 90s",0]);
-  else if(cs.silverPlaque) it.push(["🥈","Silver Plaque — perfect, under 120s",0]);
+  if(cs.topScore) it.push(["🏆","Top Score (a new personal best!)",0]);
+  if(cs.beatAvg) it.push(["📈","Above Average (beat your average!)",0]);
+  if(cs.perfect&&!cs.allRewards&&!cs.godDamnit) it.push(["✨","Perfect (no mistakes)",0]);
+  if(cs.rainbow) it.push(["🏳️‍🌈","Rainbow (yellow → green → blue → purple)",0]);
+  if(cs.grellow) it.push(["🎾","Grellow (purple → blue → yellow → green)",0]);
+  if(cs.grue) it.push(["🦚","Grue (purple → green → blue → yellow)",0]);
+  if(cs.godDamnit) it.push(["😤","Frik! (perfect but for one swap)",0]);
+  if(cs.dayBefore) it.push(["🌙","The Day Before (played between midnight and 1am)",0]);
+  if(cs.megaClicks) it.push(["🖲️","Click Happy ("+clicks+" clicks. What were you doing?!?)",0]);
+  if(cs.smusher) it.push(["🥞","Smusher (you've played SMUSH!)",0]);
+  if(cs.pathfinder) it.push(["🧭","Pathfinder (you helped chart today's difficulty)",0]);
+  if(cs.human) it.push(["🎙️","Human (you checked out the podcast, thanks :-))",0]);
+  if(cs.bsmash) it.push(["🔨","Button Smasher (the hub can take it!)",0]);
+  if(cs.goldPlaque) it.push(["🥇","Gold Plaque (perfect, under 90s)",0]);
+  else if(cs.silverPlaque) it.push(["🥈","Silver Plaque (perfect, under 120s)",0]);
   return it;
 }
 /* build one readable award row from [emoji, label, point delta]. The delta shows
@@ -2966,7 +2965,7 @@ async function sendFbk(){
   const btn=document.getElementById("fbkSend");
   const notes=(document.getElementById("fbkNotes").value||"").trim();
   const name=(document.getElementById("fbkName").value||"").trim();
-  if(!notes){ toast("Say a little something first 🙂"); return; }
+  if(!notes){ toast("You have to say something!!"); return; }
   try{ if(name) localStorage.setItem("x43_name",name); }catch(e){}
   btn.disabled=true; btn.textContent="Sending…";
   let anon=""; try{ anon=localStorage.getItem("hg_anon")||""; }catch(e){}
@@ -2978,7 +2977,7 @@ async function sendFbk(){
         w:over&&calcScore().won?1:0, m:mistakes, notes:notes.slice(0,2000),
         dev:(matchMedia&&matchMedia("(pointer:coarse)").matches)?"mobile":"desktop"})});
     if(!r.ok) throw 0;
-    closeFbk(); toast("Feedback sent — thank you! 💌");
+    closeFbk(); toast("Feedback sent, thanks!! 💌");
     document.getElementById("fbkNotes").value="";
   }catch(e){ toast("Hmm, couldn't send. Try again?"); }
   btn.disabled=false; btn.textContent="Send";
@@ -3042,7 +3041,7 @@ function showPostHub(){
   const cs=calcScore();
   document.getElementById("phHead").textContent=
     cs.ruleBreaker?"Rule Breaker.":cs.perfect?"Perfect!":cs.won?"Great work!":
-    (hubCalled&&!calledRight)?"Bold. Wrong, but bold.":"Tough one.";
+    (hubCalled&&!calledRight)?"Bold. Wrong, but bold.":"Ah beans…";
   try{ document.getElementById("phDate").textContent=fmtDate(dailyKey||todayStr()); }catch(e){}
   try{ document.getElementById("phCallFbk").style.display=hubCalled!==null?"":"none"; }catch(e){}
   /* the NYT trio: completed, win %, current streak (all local) */
