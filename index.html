@@ -2675,10 +2675,11 @@ function csPageToday(){
   const myBucket=(mistakes>=MAXM)?3:mistakes;
   const mist=[["Flawless","m0"],["One mistake","m1"],["Two mistakes","m2"],["Didn’t finish","m3"]];
   const mistRows=mist.map((r,i)=>csBarRow(r[0],i===3?"#c98a80":"#8f8574",d[r[1]]||0,d.plays||0,i===myBucket)).join("");
-  /* Call It (experiment): only appears once somebody has actually called —
-     bars are share-of-callers, not share-of-players (callers are rare) */
+  /* Call It (experiment, currently PAUSED): stats section only renders for
+     people who have the feature — showing it to everyone else taunted them
+     with a button they don't have (Jess: "Is it a secret?") */
   const callN=(+d.cw||0)+(+d.cl||0);
-  const callSec=callN?("<div class='cs-sec'><div class='cs-label'>Called the hub ("+callN.toLocaleString()+" dared)</div>"+
+  const callSec=(callN&&callItEnabled())?("<div class='cs-sec'><div class='cs-label'>Called the hub ("+callN.toLocaleString()+" dared)</div>"+
     csBarRow("Called it right","#3a7fd0",+d.cw||0,callN,hubCalled!==null&&calledRight)+
     csBarRow("Called it wrong","#c98a80",+d.cl||0,callN,callFailed())+
     "</div>"):"";
@@ -2826,11 +2827,16 @@ function csPageScores(){
   const avg=d.avg_s?Math.round(d.avg_s):null;
   const avgLine=avg?"<p class='cs-note'>Average winning score: "+avg+
     (cs.won?(cs.score>=avg?" — you're "+(cs.score-avg)+" above it.":" — "+(avg-cs.score)+" ahead of you today."):"")+"</p>":"";
-  /* speed */
-  const tl=["Under a minute","1–2 min","2–3 min","3–5 min","5–10 min","10+ min"];
-  const tTot=tl.reduce((a,_,i)=>a+(d["t"+i]||0),0);
-  const myT=solveMs?[60,120,180,300,600,1800].findIndex(z=>solveMs<=z*1000):-1;
-  const speedRows=tTot?tl.map((lab,i)=>csBarRow(lab,"#8f8574",d["t"+i]||0,tTot,i===myT)).join(""):"";
+  /* speed — prefer the fine buckets (s*) when the Worker sends them; fall back
+     to the coarse t* set for frozen/cached days that predate the split */
+  const fine=("s0" in d);
+  const tl=fine?["Under 15s","15–30s","30–45s","45–60s","1–1.5 min","1.5–2 min","2–5 min","5+ min"]
+               :["Under a minute","1–2 min","2–3 min","3–5 min","5–10 min","10+ min"];
+  const tk=fine?"s":"t";
+  const zs=fine?[15,30,45,60,90,120,300,1800]:[60,120,180,300,600,1800];
+  const tTot=tl.reduce((a,_,i)=>a+(d[tk+i]||0),0);
+  const myT=solveMs?zs.findIndex(z=>solveMs<=z*1000):-1;
+  const speedRows=tTot?tl.map((lab,i)=>csBarRow(lab,"#8f8574",d[tk+i]||0,tTot,i===myT)).join(""):"";
   /* early bird: fraction of today's plays that landed before yours (UTC-hour buckets) */
   let early="";
   if(dailyKey===todayStr()&&startTime&&solveMs){
