@@ -2626,6 +2626,7 @@ function showResult(won,score,fancy,quiet){
      button without popping the modal open on every refresh. */
   const mile=won?calcScore().streakMile:0;
   document.getElementById("mbody").innerHTML=
+    boardNoteBanner()+
     (mile?"<div class='mstreak"+(mile>=25?"":" sv")+"'>STREAK OF "+mile+"<span>"+mile+" days in a row. Incredible.</span></div>":"")+
     (won
       ? "<div class='tally-count' id='tallyCount'>"+(quiet?score:0)+"</div><div class='tally-list' id='tallyList'></div>"
@@ -2642,8 +2643,33 @@ function showResult(won,score,fancy,quiet){
   if(sb){ sb.disabled=false; sb.textContent="Results"; sb.onclick=()=>openModal(); }
   const r=document.getElementById("result");
   r.style.display="none"; r.innerHTML="";
-  if(isBeta){ document.getElementById("fbCard").style.display=""; initFb(); }
+  if(isBeta){
+    const fb=document.getElementById("fbCard"); fb.style.display=""; initFb();
+    try{ /* preview special-board plug cards on test links too */
+      const oldNote=document.getElementById("phBoardNote"); if(oldNote) oldNote.remove();
+      const note=makeBoardNote(); if(note) fb.parentNode.insertBefore(note,fb);
+    }catch(e){}
+  }
   if(communityId){ document.getElementById("crate").style.display=""; initCrate(); }
+  /* special-board plug: its own popup first, then Continue to the results
+     (which carry a slim banner of the same plug at the top) */
+  const plug=boardNoteData();
+  if(!quiet&&plug){
+    const mb=document.getElementById("mbody");
+    const resultsHTML=mb.innerHTML;
+    window.__x43PlugContinue=function(){
+      mb.innerHTML=resultsHTML;
+      if(won) runModalTally(score);
+    };
+    mb.innerHTML='<div style="text-align:center;">'+
+      '<img src="'+plug.img+'" alt="'+plug.alt+'" style="max-height:230px;max-width:85%;border-radius:10px;box-shadow:0 4px 14px rgba(43,38,32,.3);margin-bottom:12px;"><br>'+
+      '<div style="font-size:15px;line-height:1.5;max-width:380px;margin:0 auto;">'+plug.text+'</div>'+
+      (plug.btn?'<div style="margin-top:10px;">'+plug.btn+'</div>':'')+
+      '<div class="rowbtns" style="margin-top:14px;"><button class="hbtn primary" onclick="window.__x43PlugContinue()">Continue to results</button></div>'+
+      '</div>';
+    openModal(fancy);
+    return;
+  }
   if(!quiet) openModal(fancy);
   else if(!isBeta&&!communityId) showPostHub();    /* restored finished game: straight to the hub */
   if(won){ if(quiet) renderTallyStatic(score); else runModalTally(score); }
@@ -3128,23 +3154,38 @@ function showPostHub(){
   /* one-off post-game notes for special boards (book plugs etc.) */
   try{
     const oldNote=document.getElementById("phBoardNote"); if(oldNote) oldNote.remove();
-    if(special==="DIE"&&cats.some(c=>c.words.includes("HAPPY SNACKING"))){
-      const d=document.createElement("div");
-      d.id="phBoardNote";
-      d.style.cssText="margin:14px auto 0;max-width:420px;background:var(--card);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;font-size:14px;line-height:1.45;text-align:center;";
-      d.innerHTML='<img src="happysnacking.webp" alt="Happy Snacking, Don\'t Die book cover" style="max-height:160px;max-width:80%;border-radius:8px;box-shadow:0 2px 8px rgba(43,38,32,.25);margin-bottom:10px;"><br>Pre-order <b>&ldquo;Happy Snacking, Don&rsquo;t Die&rdquo;</b> by Alexis Nikole Nelson! It comes out in two days! (Which is also the publication date of <b>&ldquo;Hollywood, Ending&rdquo;</b>!)<br><a class="hbtn" style="margin-top:8px;display:inline-block;" target="_blank" rel="noopener" href="https://www.amazon.com/dp/B0GQ4QNL57">Pre-order it!</a>';
+    const note=makeBoardNote();
+    if(note){
       const anchor=document.getElementById("phCard");
-      anchor.parentNode.insertBefore(d,anchor.nextSibling);
-    }
-    if(special==="COMMA"&&cats.some(c=>c.words.includes("HOLLYWOOD"))){
-      const d=document.createElement("div");
-      d.id="phBoardNote";
-      d.style.cssText="margin:14px auto 0;max-width:420px;background:var(--card);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;font-size:14px;line-height:1.45;text-align:center;";
-      d.innerHTML='<img src="https://www.hankgreen.com/smush/hollywoodending.webp" alt="Hollywood, Ending book cover" style="max-height:160px;max-width:80%;border-radius:8px;box-shadow:0 2px 8px rgba(43,38,32,.25);margin-bottom:10px;"><br>John Green&rsquo;s new novel, <b>&ldquo;Hollywood, Ending&rdquo;</b> is out today wherever books are sold!';
-      const anchor=document.getElementById("phCard");
-      anchor.parentNode.insertBefore(d,anchor.nextSibling);
+      anchor.parentNode.insertBefore(note,anchor.nextSibling);
     }
   }catch(e){}
+}
+/* special-board plugs (book releases etc.): one data source, three renderings —
+   a full-screen first popup, a slim banner atop the results modal, and a page
+   card (post-game hub / above the beta feedback form). */
+function boardNoteData(){
+  if(special==="DIE"&&cats.some(c=>c.words.includes("HAPPY SNACKING"))) return {
+    img:"happysnacking.webp", alt:"Happy Snacking, Don't Die book cover",
+    text:'Pre-order <b>&ldquo;Happy Snacking, Don&rsquo;t Die&rdquo;</b> by Alexis Nikole Nelson! It comes out in two days! (Which is also the publication date of <b>&ldquo;Hollywood, Ending&rdquo;</b>!)',
+    btn:'<a class="hbtn" style="display:inline-block;" target="_blank" rel="noopener" href="https://www.amazon.com/dp/B0GQ4QNL57">Pre-order it!</a>'};
+  if(special==="COMMA"&&cats.some(c=>c.words.includes("HOLLYWOOD"))) return {
+    img:"https://www.hankgreen.com/smush/hollywoodending.webp", alt:"Hollywood, Ending book cover",
+    text:'John Green&rsquo;s new novel, <b>&ldquo;Hollywood, Ending&rdquo;</b> is out today wherever books are sold!',
+    btn:""};
+  return null;
+}
+function makeBoardNote(){
+  const n=boardNoteData(); if(!n) return null;
+  const d=document.createElement("div");
+  d.id="phBoardNote";
+  d.style.cssText="margin:14px auto 0;max-width:420px;background:var(--card);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;font-size:14px;line-height:1.45;text-align:center;";
+  d.innerHTML='<img src="'+n.img+'" alt="'+n.alt+'" style="max-height:160px;max-width:80%;border-radius:8px;box-shadow:0 2px 8px rgba(43,38,32,.25);margin-bottom:10px;"><br>'+n.text+(n.btn?'<br><span style="display:inline-block;margin-top:8px;">'+n.btn+'</span>':'');
+  return d;
+}
+function boardNoteBanner(){
+  const n=boardNoteData(); if(!n) return "";
+  return '<div id="mbBoardBanner" style="display:flex;align-items:center;gap:10px;text-align:left;background:var(--card);border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:12px;font-size:12.5px;line-height:1.35;"><img src="'+n.img+'" alt="" style="height:54px;border-radius:4px;flex:none;"><div>'+n.text+'</div></div>';
 }
 function admirePuzzle(){
   document.getElementById("postHub").style.display="none";
