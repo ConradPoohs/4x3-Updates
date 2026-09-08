@@ -917,7 +917,7 @@ function startGame(){
   slots=words.slice();
   /* special boards open with a pinned top row that reads as a phrase.
      Applies only when all three tiles are present; a manual shuffle undoes it. */
-  const PINROWS=[["99TH","4X3","PUZZLE"],["COYOTE","VS","ACME"]];
+  const PINROWS=[["99TH","4X3","PUZZLE"],["COYOTE","VS","ACME"],["HOLLYWOOD","COMMA","ENDING"]];
   for(const top of PINROWS){
     if(top.includes(special)&&top.every(w=>words.includes(w))){
       slots=[...top,...words.filter(w=>!top.includes(w))];
@@ -1939,6 +1939,12 @@ const DEFS={
     "Table-top Game Parts":{BOARD:"The playing surface itself.",PAWN:"The little piece that marches forward.",DIE:"One of a pair of dice."},
     "Metalworking Equipment":{LATHE:"Spins the workpiece while you shape it.",ANVIL:"What the hammer meets.",DIE:"The hardened tool that stamps or cuts metal to shape."},
     "Alexis Nikole Nelson's new book: \"Happy Snacking Don't Die\"":{"HAPPY SNACKING":"The Black Forager's signature sign-off...","DON'T":"...followed by her most important safety tip...",DIE:"...completing the title of her foraging book!"}
+  },
+  COMMA:{
+    "Punctuation":{DASH:"The long horizontal interrupter.",PERIOD:"Full stop.",COMMA:"Separates clauses, items, and ideas."},
+    "A Brief Moment of Nothing":{BEAT:"The actor's pause, written right into the script.",PAUSE:"A moment of silence before continuing.",COMMA:"A pause or interval"},
+    "Comma-Shaped Things":{TADPOLE:"A future frog: round head, curled tail.",PAISLEY:"The swirling teardrop pattern on fancy fabric.",COMMA:"Like a period but with a little extra!"},
+    "A Certain New Book, in Three Tiles":{HOLLYWOOD:"The first word of the title...",ENDING:"...the last word of the title...",COMMA:"...and the punctuation in between: \"Hollywood, Ending\"...out now!"}
   }
 };
 /* post-game easter egg: tap the hub to press it in and burst out emojis */
@@ -3126,7 +3132,15 @@ function showPostHub(){
       const d=document.createElement("div");
       d.id="phBoardNote";
       d.style.cssText="margin:14px auto 0;max-width:420px;background:var(--card);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;font-size:14px;line-height:1.45;text-align:center;";
-      d.innerHTML='Pre-order <b>&ldquo;Happy Snacking, Don&rsquo;t Die&rdquo;</b> by Alexis Nikole Nelson! It comes out in two days! (Which is also the publication date of <b>&ldquo;Hollywood, Ending&rdquo;</b>!)<br><a class="hbtn" style="margin-top:8px;display:inline-block;" target="_blank" rel="noopener" href="https://www.amazon.com/dp/B0GQ4QNL57">Pre-order it!</a>';
+      d.innerHTML='<img src="happysnacking.webp" alt="Happy Snacking, Don\'t Die book cover" style="max-height:160px;max-width:80%;border-radius:8px;box-shadow:0 2px 8px rgba(43,38,32,.25);margin-bottom:10px;"><br>Pre-order <b>&ldquo;Happy Snacking, Don&rsquo;t Die&rdquo;</b> by Alexis Nikole Nelson! It comes out in two days! (Which is also the publication date of <b>&ldquo;Hollywood, Ending&rdquo;</b>!)<br><a class="hbtn" style="margin-top:8px;display:inline-block;" target="_blank" rel="noopener" href="https://www.amazon.com/dp/B0GQ4QNL57">Pre-order it!</a>';
+      const anchor=document.getElementById("phCard");
+      anchor.parentNode.insertBefore(d,anchor.nextSibling);
+    }
+    if(special==="COMMA"&&cats.some(c=>c.words.includes("HOLLYWOOD"))){
+      const d=document.createElement("div");
+      d.id="phBoardNote";
+      d.style.cssText="margin:14px auto 0;max-width:420px;background:var(--card);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;font-size:14px;line-height:1.45;text-align:center;";
+      d.innerHTML='<img src="https://www.hankgreen.com/smush/hollywoodending.webp" alt="Hollywood, Ending book cover" style="max-height:160px;max-width:80%;border-radius:8px;box-shadow:0 2px 8px rgba(43,38,32,.25);margin-bottom:10px;"><br>John Green&rsquo;s new novel, <b>&ldquo;Hollywood, Ending&rdquo;</b> is out today wherever books are sold!';
       const anchor=document.getElementById("phCard");
       anchor.parentNode.insertBefore(d,anchor.nextSibling);
     }
