@@ -202,6 +202,23 @@
 
   <!-- ============ PLAY ============ -->
   <div id="play" class="view on">
+    <!-- one-off note from Hank (self-expires; dismiss sticks per browser) -->
+    <div id="noteBanner" class="betabanner" style="display:none;position:relative;padding-right:30px">
+      Some people were a little irked that we had a sponsored puzzle for a book yesterday, but we didn't! I was just excited about <a href="https://www.simonandschuster.com/books/Happy-Snacking-Dont-Die!/Alexis-Nikole-Nelson/9781668002551" target="_blank" rel="noopener" style="color:inherit;font-weight:700">Alexis's book</a> because she is great! 😅
+      <button onclick="dismissNote()" aria-label="Dismiss" style="position:absolute;top:4px;right:8px;border:none;background:none;font-size:16px;line-height:1;cursor:pointer;color:inherit;padding:2px">×</button>
+    </div>
+    <script>
+    function dismissNote(){ try{ localStorage.setItem("x43_note_alexis","1"); }catch(e){} document.getElementById("noteBanner").style.display="none"; }
+    (function(){
+      try{
+        if(localStorage.getItem("x43_note_alexis")==="1") return;
+        const d=new Date(), local=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+        const peek=location.hash.indexOf("notepeek")>=0;   /* #notepeek = preview any time */
+        if(!peek&&(local<"2026-09-21"||local>"2026-09-22")) return;   /* live with the Sept 21 puzzle, times out after the 22nd (player-local, same as the puzzle) */
+        document.getElementById("noteBanner").style.display="";
+      }catch(e){}
+    })();
+    </script>
     <div class="pauthor" id="pSub" style="margin:2px auto 12px"></div>
     <div id="betaBanner" class="betabanner" style="display:none">
       🧪 <b>Beta test!</b> You're playtesting an unpublished puzzle — feedback form at the end.
