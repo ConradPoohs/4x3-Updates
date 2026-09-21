@@ -151,9 +151,12 @@
       var n=playCount();
       var smushed=playedSmushToday();
       var stk=curStreak();
+      var solos=soloIds();
+      if(solos.length) return solos;               /* launch-day takeover: nothing else runs */
       return ADS.filter(function(a){
         if(a.noRotate) return false;               /* dashboard-label-only entries */
         if(a.sites!==undefined&&String(a.sites).indexOf("4x3")<0) return false;  /* not for this game */
+        if(!inWin(a)) return false;
         if(a.id==="smush"&&smushed) return false;  /* already converted today */
         if(a.socal&&!socal) return false;
         if(a.minPlays&&n<=a.minPlays) return false;
@@ -161,6 +164,11 @@
         return true;
       }).map(function(a){ return a.id; });
     }
+    function localDay(){ var d=new Date(); return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2); }
+    function inWin(a){ var t=localDay(); if(a.d0&&t<a.d0) return false; if(a.d1&&t>a.d1) return false; return true; }
+    function soloIds(){ return ADS.filter(function(a){
+      return a.solo && inWin(a) && !(a.sites!==undefined&&String(a.sites).indexOf("4x3")<0);
+    }).map(function(a){ return a.id; }); }
     function pick(socal){
       var last=LS("x43_lastad")||"";
       var ids=poolIds(socal).filter(function(x){ return x!==last; });
@@ -169,6 +177,8 @@
     }
     function show(id){ if(!byId[id]) return; SET("x43_lastad",id); window.x43ad=id; render(byId[id]); }
     function decide(socal){
+      var so=soloIds();
+      if(so.length){ show(so[Math.floor(Math.random()*so.length)]); return; }   /* takeover wins */
       /* SoCal: show the event ad the very first time, then let it rotate like the rest */
       if(socal && LS("x43_swk_seen")!=="1" && byId["swk"]){ SET("x43_swk_seen","1"); show("swk"); }
       else show(pick(socal));
@@ -176,7 +186,9 @@
     /* preview override: ?socal=1 forces the SoCal ad, ?socal=0 forces the normal rotation */
     var forced=null;
     try{ var q=new URLSearchParams(location.search); if(q.has("socal")) forced=(q.get("socal")!=="0"); }catch(e){}
-    if(forced!==null){ if(forced&&byId["swk"]) show("swk"); else show(pick(false)); return; }
+    if(forced!==null){ var so2=soloIds();
+      if(so2.length){ show(so2[0]); return; }
+      if(forced&&byId["swk"]) show("swk"); else show(pick(false)); return; }
     var cached=LS("x43_socal");                 /* "1" | "0" | null */
     if(cached!==null){ decide(cached==="1"); }  /* returning visitor: instant, no flash */
     else{                                       /* first visit: wait for geo so SoCal sees the event ad first */
